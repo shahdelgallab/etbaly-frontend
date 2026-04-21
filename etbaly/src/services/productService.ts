@@ -1,0 +1,102 @@
+import api from './api';
+import type { ApiSuccess, ApiProduct } from '../types/api';
+
+// ─── Response shapes ──────────────────────────────────────────────────────────
+
+interface PublicProductListData {
+  total:    number;   // public endpoint has both total and results
+  results:  number;
+  products: ApiProduct[];
+}
+
+interface AdminProductListData {
+  results:  number;   // admin endpoint only has results (count)
+  products: ApiProduct[];
+}
+
+interface ProductData     { product: ApiProduct }
+interface ImageUploadData { imageUrl: string }
+
+// ─── Request payloads ─────────────────────────────────────────────────────────
+
+export interface ProductQuery {
+  page?:    number;
+  limit?:   number;
+  sort?:    string;
+  fields?:  string;
+  name?:    string;
+  isActive?: boolean;
+  'currentBasePrice[gte]'?: number;
+  'currentBasePrice[lte]'?: number;
+  [key: string]: unknown;
+}
+
+export interface CreateProductPayload {
+  name:             string;
+  currentBasePrice: number;
+  linkedDesignId:   string;
+  description?:     string;
+  images?:          string[];
+  isActive?:        boolean;
+  stockLevel?:      number;
+}
+
+export interface UpdateProductPayload {
+  name?:             string;
+  currentBasePrice?: number;
+  linkedDesignId?:   string;
+  description?:      string;
+  images?:           string[];
+  isActive?:         boolean;
+  stockLevel?:       number;
+}
+
+export const productService = {
+  // ── Public ─────────────────────────────────────────────────────────────────
+
+  // GET /api/v1/products  →  { data: { total, results, products[] } }
+  getAll: (params?: ProductQuery) =>
+    api.get<ApiSuccess<PublicProductListData>>('/products', { params })
+      .then(r => r.data.data),
+
+  // GET /api/v1/products/:id  →  { data: { product } }
+  getById: (id: string) =>
+    api.get<ApiSuccess<ProductData>>(`/products/${id}`)
+      .then(r => r.data.data.product),
+
+  // ── Admin ──────────────────────────────────────────────────────────────────
+
+  // GET /api/v1/admin/products  →  { data: { results, products[] } }
+  adminGetAll: (params?: ProductQuery) =>
+    api.get<ApiSuccess<AdminProductListData>>('/admin/products', { params })
+      .then(r => r.data.data),
+
+  // GET /api/v1/admin/products/:id
+  adminGetById: (id: string) =>
+    api.get<ApiSuccess<ProductData>>(`/admin/products/${id}`)
+      .then(r => r.data.data.product),
+
+  // POST /api/v1/admin/products/upload-image  (multipart — get imageUrl first)
+  uploadImage: (file: File) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.post<ApiSuccess<ImageUploadData>>(
+      '/admin/products/upload-image', form,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    ).then(r => r.data.data.imageUrl);
+  },
+
+  // POST /api/v1/admin/products
+  create: (data: CreateProductPayload) =>
+    api.post<ApiSuccess<ProductData>>('/admin/products', data)
+      .then(r => r.data.data.product),
+
+  // PATCH /api/v1/admin/products/:id
+  update: (id: string, data: UpdateProductPayload) =>
+    api.patch<ApiSuccess<ProductData>>(`/admin/products/${id}`, data)
+      .then(r => r.data.data.product),
+
+  // DELETE /api/v1/admin/products/:id
+  delete: (id: string) =>
+    api.delete<ApiSuccess<null>>(`/admin/products/${id}`).then(r => r.data),
+};

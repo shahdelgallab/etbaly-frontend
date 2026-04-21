@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Light theme ───────────────────────────────────────────────────────── */
+:root {
+  --color-primary:       #1e3a8a;
+  --color-primary-light: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-accent:        #7c3aed;
+  --color-accent-2:      #db2777;
+  --color-accent-3:      #d97706;
+  --color-success:       #059669;
+  --color-danger:        #dc2626;
+  --color-surface:       #f0f4ff;
+  --color-surface-2:     #ffffff;
+  --color-surface-3:     #dde8ff;
+  --color-text:          #0f172a;
+  --color-text-muted:    #475569;
+  --color-border:        #bfdbfe;
+  --color-bg:            #e8eeff;
+}
+
+/* ─── Dark theme ────────────────────────────────────────────────────────── */
+.dark {
+  --color-primary:       #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-hover: #2563eb;
+  --color-accent:        #8b5cf6;
+  --color-accent-2:      #ec4899;
+  --color-accent-3:      #f59e0b;
+  --color-success:       #10b981;
+  --color-danger:        #ef4444;
+  --color-surface:       #0a1628;
+  --color-surface-2:     #050d1a;
+  --color-surface-3:     #0d1f3c;
+  --color-text:          #e2e8f0;
+  --color-text-muted:    #94a3b8;
+  --color-border:        #1e3a5f;
+  --color-bg:            #030d1a;
+}
+
+/* ─── Base ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Exo 2', sans-serif;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ─── Circuit board background ──────────────────────────────────────────── */
+.bg-circuit {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231e3a8a' fill-opacity='0.06'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ─── Glassmorphism ─────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(30, 58, 138, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass {
+  background: rgba(10, 22, 40, 0.7);
+}
+
+/* ─── Glow border ───────────────────────────────────────────────────────── */
+.glow-border {
+  border: 1px solid var(--color-primary);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+}
+
+.dark .glow-border {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.glow-border:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(124, 58, 237, 0.15);
+}
+
+/* ─── Shimmer skeleton ──────────────────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-3) 25%,
+    var(--color-border)    50%,
+    var(--color-surface-3) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--color-surface-2); }
+::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 3px; }
+
+/* ─── Font utilities ────────────────────────────────────────────────────── */
+.font-orbitron { font-family: 'Orbitron', sans-serif; }
+.font-exo      { font-family: 'Exo 2', sans-serif; }
+
+/* ─── Form inputs ───────────────────────────────────────────────────────── */
+[type='text'], [type='email'], [type='password'], [type='number'],
+[type='search'], [type='tel'], [type='url'], textarea, select {
+  background-color: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text);
+}
+
+[type='text']:focus, [type='email']:focus, [type='password']:focus,
+[type='number']:focus, [type='search']:focus, [type='tel']:focus,
+[type='url']:focus, textarea:focus, select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+  outline: none;
+}
+
+[type='color']    { padding: 2px; cursor: pointer; }
+[type='range']    { accent-color: var(--color-primary); }
+[type='checkbox'],
+[type='radio']    { accent-color: var(--color-primary); }
+
+/* ─── Shadow glow utilities ─────────────────────────────────────────────── */
+.shadow-glow    { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+.shadow-glow-sm { box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+
+/* ─── Pulse glow animation ──────────────────────────────────────────────── */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 5px var(--color-primary); }
+  50%       { box-shadow: 0 0 25px var(--color-primary), 0 0 50px var(--color-accent); }
+}
+.animate-pulse-glow { animation: pulseGlow 2s ease-in-out infinite; }
