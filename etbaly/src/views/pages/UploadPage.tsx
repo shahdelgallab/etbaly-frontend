@@ -1,5 +1,8 @@
-import { useRef } from 'react';
+import { useRef, Suspense, useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Environment } from '@react-three/drei';
+import * as THREE from 'three';
 import {
   Upload, FileBox, ShoppingCart, RotateCcw, X,
   AlertCircle, FileCheck2, HardDrive, Layers,
@@ -92,7 +95,7 @@ function DropZone({ vm, inputRef }: { vm: VM; inputRef: React.RefObject<HTMLInpu
 
       <p className="text-xs text-text-muted font-exo flex items-center gap-1.5">
         <HardDrive size={12} className="text-primary/60" />
-        Maximum file size: 50 MB
+        Maximum file size: 200 MB
       </p>
 
       {/* Drag overlay pulse ring */}
@@ -148,6 +151,82 @@ function FileInfoBar({ vm }: { vm: VM }) {
   );
 }
 
+// ─── STL geometry viewer ──────────────────────────────────────────────────────
+
+function computeCamera(geometry: THREE.BufferGeometry): {
+  position: [number, number, number];
+  target:   [number, number, number];
+} {
+  geometry.computeBoundingBox();
+  const box  = geometry.boundingBox ?? new THREE.Box3();
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const maxDim   = Math.max(size.x, size.y, size.z) || 10;
+  const distance = maxDim * 3;
+  return {
+    position: [0, maxDim * 0.5, distance],
+    target:   [0, 0, 0],
+  };
+}
+
+function STLPreview({ geometry }: { geometry: THREE.BufferGeometry }) {
+  const cam = useMemo(() => computeCamera(geometry), [geometry]);
+  const [contextLost, setContextLost] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    if (!contextLost) return;
+    const t = setTimeout(() => {
+      setContextLost(false);
+      setRetryCount(n => n + 1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [contextLost]);
+
+  return (
+    <div className="relative rounded-2xl overflow-hidden border border-accent/30 bg-surface" style={{ height: '340px' }}>
+      {contextLost ? (
+        <div className="w-full h-full flex items-center justify-center gap-2">
+          <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <span className="text-xs font-exo text-text-muted">Initializing renderer…</span>
+        </div>
+      ) : (
+        <Canvas
+          key={`${geometry.uuid}-${retryCount}`}
+          camera={{ position: cam.position, fov: 50, near: 0.01, far: cam.position[2] * 100 }}
+          gl={{ antialias: true, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false }}
+          onCreated={({ gl }) => {
+            const canvas = gl.domElement;
+            const handleLost = () => setContextLost(true);
+            canvas.addEventListener('webglcontextlost', handleLost);
+            return () => canvas.removeEventListener('webglcontextlost', handleLost);
+          }}
+        >
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[5, 8, 5]} intensity={1.2} castShadow />
+          <directionalLight position={[-5, -2, -5]} intensity={0.3} />
+          <Suspense fallback={null}>
+            <mesh geometry={geometry}>
+              <meshStandardMaterial color="#1e3a5f" metalness={0.3} roughness={0.4} />
+            </mesh>
+          </Suspense>
+          <OrbitControls
+            target={cam.target}
+            autoRotate
+            autoRotateSpeed={1.5}
+            enableZoom
+            enablePan={false}
+          />
+          <Environment preset="city" />
+        </Canvas>
+      )}
+      <p className="absolute bottom-2 left-3 text-[10px] text-text-muted/60 font-exo pointer-events-none">
+        Drag to rotate · Scroll to zoom
+      </p>
+    </div>
+  );
+}
+
 // ─── 3D preview panel ─────────────────────────────────────────────────────────
 
 function PreviewPanel({ vm }: { vm: VM }) {
@@ -168,12 +247,19 @@ function PreviewPanel({ vm }: { vm: VM }) {
 
       <FileInfoBar vm={vm} />
 
-      {vm.canPreview && vm.previewUrl ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-        >
+      {/* STL geometry preview */}
+      {vm.format === 'stl' && vm.geometry ? (
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+          <STLPreview geometry={vm.geometry} />
+        </motion.div>
+      ) : vm.format === 'stl' && !vm.geometry ? (
+        // STL still parsing
+        <div className="flex flex-col items-center justify-center gap-3 glass border border-border rounded-2xl py-14 text-text-muted">
+          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-sm font-exo">Parsing STL file…</p>
+        </div>
+      ) : vm.canPreview && vm.previewUrl ? (
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
           <ModelViewer modelUrl={vm.previewUrl} height="340px" autoRotate />
         </motion.div>
       ) : (
@@ -251,7 +337,7 @@ function DetailsForm({ vm }: { vm: VM }) {
               type="text"
               value={vm.form.color}
               onChange={e => vm.updateForm('color', e.target.value)}
-              placeholder="#3b82f6"
+              placeholder="#1e3a5f"
               className={inputCls}
               aria-label="Color hex value"
             />
@@ -466,7 +552,7 @@ export default function UploadPage() {
                 className="grid grid-cols-3 gap-3"
               >
                 {[
-                  { icon: <Zap size={14} />,    label: 'Instant preview',  desc: 'GLB/GLTF files render live' },
+                  { icon: <Zap size={14} />,    label: 'Instant preview',  desc: 'STL, GLB & GLTF render live' },
                   { icon: <Layers size={14} />,  label: '4 formats',        desc: 'STL, OBJ, GLB, GLTF'       },
                   { icon: <ShoppingCart size={14} />, label: 'Direct to cart', desc: 'No account needed'      },
                 ].map(f => (

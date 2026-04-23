@@ -6,10 +6,12 @@ import Navbar from './views/components/Navbar';
 import Footer from './views/components/Footer';
 import CartSidebar from './views/components/CartSidebar';
 import ThemeToggle from './views/components/ThemeToggle';
+import CustomCursor from './views/components/CustomCursor';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setUser, setHydrating } from './store/slices/authSlice';
 import { tokenStorage } from './services/api';
 import { userService } from './services/userService';
+import { initLenis, destroyLenis } from './lib/lenis';
 
 // ─── Eager-loaded (above the fold) ───────────────────────────────────────────
 import LandingPage from './views/pages/LandingPage';
@@ -49,6 +51,12 @@ export default function App() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector(s => s.auth);
 
+  // Initialize Lenis smooth scroll
+  useEffect(() => {
+    const lenis = initLenis();
+    return () => destroyLenis();
+  }, []);
+
   // Re-hydrate user from token on every app load (Redux has no persistence)
   useEffect(() => {
     if (user) { dispatch(setHydrating(false)); return; }
@@ -61,7 +69,10 @@ export default function App() {
   }, [dispatch, user]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--color-bg)]">
+    <div className="flex flex-col min-h-screen bg-bg">
+      {/* Custom cursor */}
+      <CustomCursor />
+      
       <Navbar />
 
       <main className="flex-1">

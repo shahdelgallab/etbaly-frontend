@@ -1,17 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Menu, X, User, Search, Upload, MessageSquare, Home, Grid3X3, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { useCartViewModel } from '../../viewmodels/useCartViewModel';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logoutThunk } from '../../store/slices/authSlice';
 import ThemeToggle from './ThemeToggle';
 
 const NAV_LINKS = [
-  { to: '/',         label: 'Home',        icon: <Home size={15} />,          end: true  },
-  { to: '/products', label: 'Collections', icon: <Grid3X3 size={15} />,       end: false },
-  { to: '/chat',     label: 'AI Chatbot',  icon: <MessageSquare size={15} />, end: false },
-  { to: '/upload',   label: 'Upload',      icon: <Upload size={15} />,        end: false },
+  { to: '/',         label: 'HOME',        end: true  },
+  { to: '/products', label: 'COLLECTIONS', end: false },
+  { to: '/chat',     label: 'AI CHATBOT',  end: false },
+  { to: '/upload',   label: 'UPLOAD',      end: false },
 ] as const;
 
 function getInitials(firstName?: string, lastName?: string): string {
@@ -33,36 +33,36 @@ function UserDropdown({ onClose }: { onClose: () => void }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -8, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.95 }}
-      transition={{ duration: 0.15 }}
-      className="absolute right-0 top-full mt-2 w-52 glass border border-border rounded-2xl overflow-hidden shadow-glow z-50"
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
+      className="absolute right-0 top-full mt-2 w-52 bg-surface border border-border sharp-corners overflow-hidden z-50"
     >
-      <div className="px-4 py-3 border-b border-border">
-        <p className="text-sm font-medium text-text font-exo truncate">
+      <div className="px-4 py-3 border-b border-border bg-surface-2">
+        <p className="text-sm font-medium text-text truncate font-body">
           {user?.profile?.firstName} {user?.profile?.lastName}
         </p>
-        <p className="text-xs text-text-muted font-exo truncate">{user?.email}</p>
+        <p className="text-xs text-text-muted truncate font-body">{user?.email}</p>
       </div>
       <div className="py-1">
         <button
           onClick={() => go('/profile')}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-primary/5 transition-colors font-exo text-left"
+          className="cursor-hover w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-2 transition-colors text-left font-body"
         >
           <User size={15} /> My Profile
         </button>
         {user?.role === 'admin' && (
           <button
             onClick={() => go('/admin')}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-primary/5 transition-colors font-exo text-left"
+            className="cursor-hover w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-muted hover:text-text hover:bg-surface-2 transition-colors text-left font-body"
           >
             <Settings size={15} /> Admin Dashboard
           </button>
         )}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/5 transition-colors font-exo text-left"
+          className="cursor-hover w-full flex items-center gap-3 px-4 py-2.5 text-sm text-danger hover:bg-danger/10 transition-colors text-left font-body"
         >
           <LogOut size={15} /> Sign Out
         </button>
@@ -71,15 +71,11 @@ function UserDropdown({ onClose }: { onClose: () => void }) {
   );
 }
 
-
 export default function Navbar() {
   const [scrolled, setScrolled]         = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen]     = useState(false);
-  const [searchQuery, setSearchQuery]   = useState('');
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const searchRef   = useRef<HTMLInputElement>(null);
 
   const { totalItems, openCart } = useCartViewModel();
   const { user }                 = useAppSelector(s => s.auth);
@@ -102,19 +98,6 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', fn);
   }, []);
 
-  useEffect(() => {
-    if (searchOpen) searchRef.current?.focus();
-  }, [searchOpen]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/products?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery('');
-      setSearchOpen(false);
-    }
-  };
-
   const handleMobileLogout = async () => {
     await dispatch(logoutThunk());
     navigate('/signin');
@@ -128,26 +111,22 @@ export default function Navbar() {
     <header
       className={[
         'fixed top-0 left-0 right-0 z-40 transition-all duration-300',
-        scrolled ? 'glass border-b border-border shadow-glow-sm' : 'bg-transparent',
+        scrolled
+          ? 'bg-bg/90 backdrop-blur-xl border-b border-border'
+          : 'bg-transparent',
       ].join(' ')}
     >
       <nav
-        className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4"
+        className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-8"
         aria-label="Main navigation"
       >
-        {/* Logo */}
-        <Link to="/" className="relative flex items-center gap-2 text-primary shrink-0" aria-label="Etbaly home">
-          <span className="font-orbitron text-xl font-black tracking-widest leading-none">ETBALY</span>
-          <motion.div
-            className="absolute -bottom-1 left-0 h-0.5 bg-gradient-to-r from-primary to-accent rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: '100%' }}
-            transition={{ duration: 1.2, delay: 0.4, ease: 'easeOut' }}
-          />
+        {/* Logo — Bebas Neue, large */}
+        <Link to="/" className="cursor-hover flex items-center shrink-0" aria-label="Etbaly home">
+          <span className="text-3xl font-display text-text tracking-wide">ETBALY</span>
         </Link>
 
-        {/* Desktop nav links */}
-        <div className="hidden md:flex items-center gap-0.5">
+        {/* Desktop nav links — Inter, uppercase, small */}
+        <div className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map(link => (
             <NavLink
               key={link.to}
@@ -155,19 +134,20 @@ export default function Navbar() {
               end={link.end}
               className={({ isActive }) =>
                 [
-                  'relative flex items-center gap-1.5 px-3 py-2 rounded-lg',
-                  'text-sm font-medium font-exo transition-colors duration-150',
-                  isActive ? 'text-primary' : 'text-text-muted hover:text-text hover:bg-primary/5',
+                  'cursor-hover relative text-xs font-body font-medium tracking-widest transition-colors duration-200',
+                  isActive
+                    ? 'text-text'
+                    : 'text-text-muted hover:text-text',
                 ].join(' ')
               }
             >
               {({ isActive }) => (
                 <>
-                  {link.icon} {link.label}
+                  {link.label}
                   {isActive && (
-                    <motion.span
-                      layoutId="nav-pill"
-                      className="absolute inset-0 rounded-lg bg-primary/10 border border-primary/20 -z-10"
+                    <motion.div
+                      layoutId="navbar-indicator"
+                      className="absolute -bottom-1 left-0 right-0 h-[2px] bg-primary"
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
@@ -178,46 +158,7 @@ export default function Navbar() {
         </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
-
-          {/* Search */}
-          <AnimatePresence initial={false}>
-            {searchOpen ? (
-              <motion.form
-                key="open"
-                initial={{ width: 36, opacity: 0 }}
-                animate={{ width: 200, opacity: 1 }}
-                exit={{ width: 36, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                onSubmit={handleSearch}
-                className="hidden md:flex items-center glass border border-border rounded-full overflow-hidden"
-              >
-                <input
-                  ref={searchRef}
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search models..."
-                  aria-label="Search"
-                  className="flex-1 bg-transparent px-3 py-1.5 text-sm text-text placeholder:text-text-muted focus:outline-none font-exo"
-                />
-                <button type="button" onClick={() => setSearchOpen(false)} aria-label="Close search" className="px-2 text-text-muted hover:text-primary">
-                  <X size={14} />
-                </button>
-              </motion.form>
-            ) : (
-              <motion.button
-                key="closed"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setSearchOpen(true)}
-                aria-label="Open search"
-                className="hidden md:flex w-9 h-9 rounded-full glass border border-border items-center justify-center text-text-muted hover:text-primary hover:border-primary transition-all"
-              >
-                <Search size={16} />
-              </motion.button>
-            )}
-          </AnimatePresence>
+        <div className="flex items-center gap-3 shrink-0">
 
           {/* Theme toggle */}
           <ThemeToggle />
@@ -226,9 +167,9 @@ export default function Navbar() {
           <button
             onClick={openCart}
             aria-label={`Cart, ${totalItems} items`}
-            className="relative w-9 h-9 rounded-full glass border border-border flex items-center justify-center text-text-muted hover:text-primary hover:border-primary transition-all"
+            className="cursor-hover relative w-10 h-10 sharp-corners border border-border flex items-center justify-center text-text-muted hover:text-primary hover:border-primary transition-all"
           >
-            <ShoppingCart size={16} />
+            <ShoppingCart size={18} />
             <AnimatePresence>
               {totalItems > 0 && (
                 <motion.span
@@ -236,7 +177,7 @@ export default function Navbar() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-white text-[10px] font-bold font-orbitron rounded-full flex items-center justify-center shadow-glow-sm"
+                  className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-primary text-bg text-[10px] font-bold no-corners flex items-center justify-center font-body"
                 >
                   {totalItems > 99 ? '99+' : totalItems}
                 </motion.span>
@@ -249,9 +190,9 @@ export default function Navbar() {
             {user ? (
               <motion.div
                 key="avatar"
-                initial={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
+                exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ duration: 0.2 }}
                 className="relative hidden md:block"
                 ref={userMenuRef}
@@ -260,19 +201,15 @@ export default function Navbar() {
                   onClick={() => setUserMenuOpen(o => !o)}
                   aria-label="User menu"
                   aria-expanded={userMenuOpen}
-                  className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full glass border border-border hover:border-primary transition-all"
+                  className="cursor-hover w-10 h-10 sharp-corners border border-border hover:border-primary transition-all overflow-hidden"
                 >
-                  <div className="w-7 h-7 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-primary overflow-hidden">
-                    {user.profile?.avatarUrl ? (
-                      <img src={user.profile.avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="font-orbitron text-xs font-bold">{userInitials}</span>
-                    )}
-                  </div>
-                  <ChevronDown
-                    size={12}
-                    className={`text-text-muted transition-transform duration-200 ${userMenuOpen ? 'rotate-180' : ''}`}
-                  />
+                  {user.profile?.avatarUrl ? (
+                    <img src={user.profile.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-surface-2 flex items-center justify-center text-primary text-sm font-bold font-body">
+                      {userInitials}
+                    </div>
+                  )}
                 </button>
                 <AnimatePresence>
                   {userMenuOpen && <UserDropdown onClose={() => setUserMenuOpen(false)} />}
@@ -285,22 +222,19 @@ export default function Navbar() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
-                className="hidden md:flex items-center gap-2"
+                className="hidden md:flex items-center gap-3"
               >
                 <Link
                   to="/signin"
-                  className="px-4 py-1.5 text-sm font-medium font-exo glass border border-border text-text-muted rounded-full hover:text-primary hover:border-primary transition-all"
+                  className="cursor-hover px-5 py-2 text-xs font-body font-medium tracking-wider text-text-muted hover:text-text transition-colors border border-border hover:border-text no-corners"
                 >
-                  Sign In
+                  SIGN IN
                 </Link>
-                <Link to="/signup">
-                  <motion.span
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    className="inline-block px-4 py-1.5 text-sm font-semibold font-orbitron bg-primary text-white rounded-full hover:shadow-glow transition-all cursor-pointer"
-                  >
-                    Sign Up
-                  </motion.span>
+                <Link
+                  to="/signup"
+                  className="cursor-hover px-5 py-2 text-xs font-body font-bold tracking-wider bg-primary text-bg no-corners hover:bg-primary-dark transition-colors"
+                >
+                  SIGN UP
                 </Link>
               </motion.div>
             )}
@@ -308,7 +242,7 @@ export default function Navbar() {
 
           {/* Mobile hamburger */}
           <button
-            className="md:hidden w-9 h-9 rounded-full glass border border-border flex items-center justify-center text-text-muted hover:text-primary transition-colors"
+            className="cursor-hover md:hidden w-10 h-10 sharp-corners border border-border flex items-center justify-center text-text-muted hover:text-text hover:border-primary transition-all"
             onClick={() => setMobileOpen(o => !o)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
@@ -316,11 +250,11 @@ export default function Navbar() {
             <AnimatePresence mode="wait" initial={false}>
               {mobileOpen ? (
                 <motion.span key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                  <X size={18} />
+                  <X size={20} />
                 </motion.span>
               ) : (
                 <motion.span key="m" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                  <Menu size={18} />
+                  <Menu size={20} />
                 </motion.span>
               )}
             </AnimatePresence>
@@ -328,108 +262,84 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile drawer */}
+      {/* Mobile fullscreen overlay */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="md:hidden glass border-t border-border overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="md:hidden fixed inset-0 top-20 bg-bg z-30 overflow-y-auto"
           >
-            <div className="px-4 py-4 space-y-1">
-              {/* Mobile search */}
-              <form onSubmit={handleSearch} className="mb-3">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                  <input
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Search models..."
-                    aria-label="Search"
-                    className="w-full pl-8 pr-3 py-2 glass border border-border rounded-lg text-sm text-text placeholder:text-text-muted focus:outline-none focus:border-primary font-exo"
-                  />
-                </div>
-              </form>
-
+            <div className="px-6 py-8 space-y-6">
               {/* Nav links */}
-              {NAV_LINKS.map(link => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  end={link.end}
-                  onClick={closeMobile}
-                  className={({ isActive }) =>
-                    [
-                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-exo transition-colors',
-                      isActive
-                        ? 'bg-primary/10 text-primary border border-primary/20'
-                        : 'text-text-muted hover:text-text hover:bg-primary/5',
-                    ].join(' ')
-                  }
-                >
-                  {link.icon} {link.label}
-                </NavLink>
-              ))}
+              <div className="space-y-2">
+                {NAV_LINKS.map(link => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.end}
+                    onClick={closeMobile}
+                    className={({ isActive }) =>
+                      [
+                        'cursor-hover block px-4 py-3 text-2xl font-display transition-colors',
+                        isActive
+                          ? 'text-primary'
+                          : 'text-text-muted hover:text-text',
+                      ].join(' ')
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
 
               {/* Mobile auth */}
-              <div className="pt-3 mt-2 border-t border-border space-y-1">
+              <div className="pt-6 border-t border-border space-y-3">
                 {user ? (
                   <>
-                    <div className="flex items-center gap-3 px-3 py-2 mb-1">
-                      <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/50 flex items-center justify-center text-primary overflow-hidden shrink-0">
+                    <div className="flex items-center gap-3 px-4 py-3 mb-3">
+                      <div className="w-12 h-12 sharp-corners border border-primary overflow-hidden shrink-0">
                         {user.profile?.avatarUrl ? (
                           <img src={user.profile.avatarUrl} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <span className="font-orbitron text-xs font-bold">{userInitials}</span>
+                          <div className="w-full h-full bg-surface-2 flex items-center justify-center text-primary text-sm font-bold font-body">
+                            {userInitials}
+                          </div>
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-text font-exo truncate">
+                        <p className="text-sm font-medium text-text truncate font-body">
                           {user.profile?.firstName} {user.profile?.lastName}
                         </p>
-                        <p className="text-xs text-text-muted font-exo truncate">{user.email}</p>
+                        <p className="text-xs text-text-muted truncate font-body">{user.email}</p>
                       </div>
                     </div>
-                    <NavLink
-                      to="/profile"
-                      onClick={closeMobile}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-exo text-text-muted hover:text-text hover:bg-primary/5 transition-colors"
-                    >
-                      <User size={15} /> Profile
+                    <NavLink to="/profile" onClick={closeMobile}
+                      className="cursor-hover block px-4 py-3 text-sm font-body text-text-muted hover:text-text transition-colors">
+                      Profile
                     </NavLink>
                     {user.role === 'admin' && (
-                      <NavLink
-                        to="/admin"
-                        onClick={closeMobile}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-exo text-text-muted hover:text-text hover:bg-primary/5 transition-colors"
-                      >
-                        <Settings size={15} /> Admin
+                      <NavLink to="/admin" onClick={closeMobile}
+                        className="cursor-hover block px-4 py-3 text-sm font-body text-text-muted hover:text-text transition-colors">
+                        Admin Dashboard
                       </NavLink>
                     )}
-                    <button
-                      onClick={handleMobileLogout}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-exo text-red-400 hover:bg-red-500/5 transition-colors"
-                    >
-                      <LogOut size={15} /> Sign Out
+                    <button onClick={handleMobileLogout}
+                      className="cursor-hover w-full text-left px-4 py-3 text-sm font-body text-danger hover:bg-danger/10 transition-colors">
+                      Sign Out
                     </button>
                   </>
                 ) : (
-                  <div className="flex gap-2 pt-1">
-                    <Link
-                      to="/signin"
-                      onClick={closeMobile}
-                      className="flex-1 py-2.5 text-center text-sm font-exo glass border border-border text-text-muted rounded-xl hover:text-primary hover:border-primary transition-all"
-                    >
-                      Sign In
+                  <div className="flex flex-col gap-3">
+                    <Link to="/signin" onClick={closeMobile}
+                      className="cursor-hover block py-3 text-center text-sm font-body font-medium border border-border text-text-muted hover:text-text hover:border-text no-corners transition-all">
+                      SIGN IN
                     </Link>
-                    <Link
-                      to="/signup"
-                      onClick={closeMobile}
-                      className="flex-1 py-2.5 text-center text-sm font-orbitron font-semibold bg-primary text-white rounded-xl hover:shadow-glow transition-all"
-                    >
-                      Sign Up
+                    <Link to="/signup" onClick={closeMobile}
+                      className="cursor-hover block py-3 text-center text-sm font-body font-bold bg-primary text-bg no-corners hover:bg-primary-dark transition-colors">
+                      SIGN UP
                     </Link>
                   </div>
                 )}

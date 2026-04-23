@@ -88,7 +88,7 @@ function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
   const pick = (f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase();
     if (!['stl', 'obj'].includes(ext ?? '')) { setError('Only .stl and .obj files are accepted.'); return; }
-    if (f.size > 50 * 1024 * 1024) { setError('File must be under 50 MB.'); return; }
+    if (f.size > 200 * 1024 * 1024) { setError('File must be under 200 MB.'); return; }
     setError(''); setFile(f);
   };
 
@@ -131,7 +131,7 @@ function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
           <div className="flex flex-col items-center gap-2">
             <Upload size={28} className="text-text-muted" />
             <p className="text-sm font-exo text-text-muted">Drag & drop or click to select</p>
-            <p className="text-xs font-exo text-text-muted/60">.stl, .obj — max 50 MB</p>
+            <p className="text-xs font-exo text-text-muted/60">.stl, .obj — max 200 MB</p>
           </div>
         )}
         <input ref={ref} type="file" accept=".stl,.obj" className="hidden"

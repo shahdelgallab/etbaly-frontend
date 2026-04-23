@@ -1,13 +1,18 @@
-import { useRef, useState, Suspense, useMemo, useEffect } from 'react';
+﻿import { useRef, useState, Suspense, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
-import * as THREE from 'three';import {
-  ImagePlus, Check, X, RotateCcw, Bot, User,
-  Wand2, ShoppingCart, CheckCircle2, Upload,
+import * as THREE from 'three';
+import {
+  ImagePlus, X, RotateCcw, Bot, User,
+  Wand2, ShoppingCart, CheckCircle2, Upload, Type, Image,
+  Send, ArrowRight,
 } from 'lucide-react';
 import { useChatViewModel } from '../../viewmodels/useChatViewModel';
+import type { ChatMode } from '../../viewmodels/useChatViewModel';
 import PageWrapper from '../components/PageWrapper';
+import { AuthenticatedImage } from '../components/AuthenticatedImage';
+import { QuotationPanel, QuoteReadyPanel } from '../components/QuotationPanel';
 import type { ChatMessage } from '../../models/ChatMessage';
 import type { GenerationStage } from '../../viewmodels/useChatViewModel';
 
@@ -141,7 +146,7 @@ function ModelPreview({ geometry }: { geometry: THREE.BufferGeometry }) {
           <directionalLight position={[-5, -2, -5]} intensity={0.3} />
           <Suspense fallback={null}>
             <mesh geometry={geometry}>
-              <meshStandardMaterial color="#3b82f6" metalness={0.3} roughness={0.4} />
+              <meshStandardMaterial color="#1e3a5f" metalness={0.3} roughness={0.4} />
             </mesh>
           </Suspense>
           <OrbitControls
@@ -197,6 +202,8 @@ function TypingIndicator() {
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === 'user';
+  const [imageError, setImageError] = useState(false);
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -216,9 +223,23 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
             {msg.content}
           </div>
         )}
-        {msg.imageUrl && (
-          <img src={msg.imageUrl} alt="Uploaded reference"
-            className="max-w-xs rounded-xl border border-border object-cover" />
+        {msg.imageUrl && !imageError && (
+          <AuthenticatedImage
+            src={msg.imageUrl}
+            alt={msg.role === 'user' ? 'Uploaded reference' : 'Generated image'}
+            className="max-w-xs rounded-xl border border-border object-cover"
+            onError={() => {
+              console.error('Failed to load image:', msg.imageUrl);
+              setImageError(true);
+            }}
+            onLoad={() => console.log('Image loaded successfully:', msg.imageUrl)}
+          />
+        )}
+        {msg.imageUrl && imageError && (
+          <div className="px-3 py-2 glass border border-border rounded-lg text-xs text-text-muted font-exo max-w-xs">
+            <p className="mb-1">Failed to load image</p>
+            <p className="text-[10px] break-all">{msg.imageUrl}</p>
+          </div>
         )}
         <span className="text-[10px] text-text-muted font-exo px-1">
           {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -228,7 +249,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
   );
 }
 
-// ─── Confirm bar ──────────────────────────────────────────────────────────────
+// ─── Confirm bar (Get Quotation) ─────────────────────────────────────────────
 
 function ConfirmBar({ onConfirm, onReject }: { onConfirm: () => void; onReject: () => void }) {
   return (
@@ -237,12 +258,12 @@ function ConfirmBar({ onConfirm, onReject }: { onConfirm: () => void; onReject: 
       className="flex flex-col sm:flex-row gap-3 justify-center items-center py-3 px-2"
     >
       <button onClick={onConfirm}
-        className="flex items-center gap-2 px-6 py-2.5 bg-success/10 border border-success/40 text-success rounded-xl text-sm font-exo hover:bg-success/20 transition-all w-full sm:w-auto justify-center">
-        <Check size={15} /> Yes, add to cart
+        className="flex items-center gap-2 px-6 py-2.5 bg-accent/10 border border-accent/40 text-accent rounded-xl text-sm font-exo hover:bg-accent/20 transition-all w-full sm:w-auto justify-center">
+        <ArrowRight size={15} /> Get Quotation
       </button>
       <button onClick={onReject}
-        className="flex items-center gap-2 px-6 py-2.5 glass border border-accent/40 text-accent rounded-xl text-sm font-exo hover:bg-accent/10 transition-all w-full sm:w-auto justify-center">
-        <X size={15} /> Try again
+        className="flex items-center gap-2 px-6 py-2.5 glass border border-border text-text-muted rounded-xl text-sm font-exo hover:border-primary hover:text-text transition-all w-full sm:w-auto justify-center">
+        <X size={15} /> Regenerate
       </button>
     </motion.div>
   );
@@ -354,6 +375,188 @@ function NameForm({ file, onSubmit, onCancel, loading }: {
   );
 }
 
+// ─── Mode selector ────────────────────────────────────────────────────────────
+
+function ModeSelector({ onSelect }: { onSelect: (mode: ChatMode) => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center h-full gap-6 text-center py-8"
+    >
+      <div className="w-20 h-20 rounded-3xl bg-accent/10 border border-accent/30 flex items-center justify-center">
+        <Wand2 size={36} className="text-accent" />
+      </div>
+      <div>
+        <h2 className="font-orbitron text-xl font-bold text-text mb-2">AI 3D Model Generator</h2>
+        <p className="text-text-muted text-sm font-exo max-w-md">
+          Choose how you want to create your 3D model
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
+        {/* Text to 3D */}
+        <button
+          onClick={() => onSelect('text-to-3d')}
+          className="group glass border border-border hover:border-primary rounded-2xl p-6 transition-all hover:shadow-glow-sm"
+        >
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center text-primary mb-4 group-hover:bg-primary/20 transition-all">
+            <Type size={24} />
+          </div>
+          <h3 className="font-orbitron text-base font-bold text-text mb-2">Text to 3D</h3>
+          <p className="text-xs text-text-muted font-exo leading-relaxed">
+            Describe your idea in words and AI will generate an image, then convert it to a 3D model
+          </p>
+        </button>
+
+        {/* Image to 3D */}
+        <button
+          onClick={() => onSelect('image-to-3d')}
+          className="group glass border border-border hover:border-accent rounded-2xl p-6 transition-all hover:shadow-glow-sm"
+        >
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent mb-4 group-hover:bg-accent/20 transition-all">
+            <Image size={24} />
+          </div>
+          <h3 className="font-orbitron text-base font-bold text-text mb-2">Image to 3D</h3>
+          <p className="text-xs text-text-muted font-exo leading-relaxed">
+            Upload a reference photo and AI will generate a printable 3D model directly
+          </p>
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Text input form ──────────────────────────────────────────────────────────
+
+function TextPromptForm({ onSubmit, loading }: { onSubmit: (prompt: string, name: string) => void; loading: boolean }) {
+  const [prompt, setPrompt] = useState('');
+  const [name, setName] = useState('');
+
+  const handleSubmit = () => {
+    if (prompt.trim().length < 1 || name.trim().length < 2) return;
+    onSubmit(prompt.trim(), name.trim());
+    setPrompt('');
+    setName('');
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass border border-border rounded-2xl p-5 space-y-4"
+    >
+      <div>
+        <label className="block text-xs font-medium text-text-muted font-exo mb-1.5">
+          Describe your 3D model
+        </label>
+        <textarea
+          value={prompt}
+          onChange={e => setPrompt(e.target.value)}
+          placeholder="e.g. A futuristic vase with geometric patterns"
+          maxLength={500}
+          rows={3}
+          className="w-full px-4 py-2.5 glass border border-border rounded-xl text-sm text-text placeholder:text-text-muted font-exo focus:outline-none focus:border-primary transition-all resize-none"
+        />
+        <p className="text-[11px] text-text-muted font-exo mt-1">
+          {prompt.length}/500 characters
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-text-muted font-exo mb-1.5">
+          Design Name
+        </label>
+        <input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="e.g. Geometric Vase"
+          maxLength={100}
+          className="w-full px-4 py-2.5 glass border border-border rounded-xl text-sm text-text placeholder:text-text-muted font-exo focus:outline-none focus:border-primary transition-all"
+        />
+        <p className="text-[11px] text-text-muted font-exo mt-1">2–100 characters</p>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={loading || prompt.trim().length < 1 || name.trim().length < 2}
+        className="w-full py-2.5 bg-primary text-white font-orbitron text-sm rounded-xl hover:shadow-glow transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {loading ? (
+          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        ) : (
+          <>
+            <Send size={14} /> Generate Image
+          </>
+        )}
+      </button>
+    </motion.div>
+  );
+}
+
+// ─── Image preview with approve/reject ────────────────────────────────────────
+
+function ImagePreview({ imageUrl, onApprove, onReject, loading }: {
+  imageUrl: string;
+  onApprove: () => void;
+  onReject: () => void;
+  loading: boolean;
+}) {
+  const [imageError, setImageError] = useState(false);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="glass border border-border rounded-2xl p-5 space-y-4"
+    >
+      <div>
+        <p className="text-xs font-medium text-text-muted font-exo mb-3">Generated Image Preview</p>
+        {imageError ? (
+          <div className="w-full p-6 glass border border-error/30 rounded-xl text-center space-y-2">
+            <p className="text-sm text-error font-exo">Failed to load generated image</p>
+            <p className="text-xs text-text-muted font-mono break-all">{imageUrl}</p>
+          </div>
+        ) : (
+          <AuthenticatedImage
+            src={imageUrl}
+            alt="Generated preview"
+            className="w-full rounded-xl border border-border object-cover"
+            onError={() => {
+              console.error('ImagePreview: Failed to load image:', imageUrl);
+              setImageError(true);
+            }}
+            onLoad={() => console.log('ImagePreview: Image loaded successfully:', imageUrl)}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <button
+          onClick={onReject}
+          disabled={loading}
+          className="flex-1 py-2.5 glass border border-border text-text-muted font-exo text-sm rounded-xl hover:text-primary hover:border-primary transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <X size={15} /> Try Different Prompt
+        </button>
+        <button
+          onClick={onApprove}
+          disabled={loading}
+          className="flex-1 py-2.5 bg-success/10 border border-success/40 text-success font-exo text-sm rounded-xl hover:bg-success/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <span className="w-4 h-4 border-2 border-success/30 border-t-success rounded-full animate-spin" />
+          ) : (
+            <>
+              <ArrowRight size={15} /> Convert to 3D Model
+            </>
+          )}
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
@@ -361,91 +564,139 @@ export default function ChatPage() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
-  const handleFile   = (file: File) => setPendingFile(file);
-  const handleCancel = () => setPendingFile(null);
+  // Auto-scroll on new messages
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [vm.messages.length, vm.chatStep]);
 
-  const handleSubmit = async (name: string) => {
+  const handleModeSelect = (mode: ChatMode) => {
+    vm.setChatMode(mode);
+  };
+
+  const handleFile = (file: File) => setPendingFile(file);
+  const handleCancelFile = () => setPendingFile(null);
+
+  const handleImageSubmit = async (name: string) => {
     if (!pendingFile) return;
     const file = pendingFile;
     setPendingFile(null);
     await vm.generateFromImage(file, name);
-    requestAnimationFrame(() => {
-      feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
-    });
   };
 
-  const canUpload = vm.chatStep === 'idle' || vm.chatStep === 'done';
+  const handleTextSubmit = async (prompt: string, name: string) => {
+    await vm.generateImageFromText(prompt, name);
+  };
+
+  const canInput = vm.chatStep === 'idle' || vm.chatStep === 'done';
   const isGenerating = vm.chatStep === 'generating';
-  const showPreview  = (vm.chatStep === 'confirm' || vm.chatStep === 'done') && vm.pendingModel?.geometry;
+  const showImagePreview = vm.chatStep === 'image-preview' && vm.pendingImageUrl;
+  const showModelPreview = (vm.chatStep === 'confirm' || vm.chatStep === 'done') && vm.pendingModel?.geometry;
+
+  // Dynamic header based on mode
+  const HeaderIcon = vm.chatMode === 'text-to-3d' ? Type : vm.chatMode === 'image-to-3d' ? Image : Wand2;
+  const headerTitle = vm.chatMode === 'text-to-3d' 
+    ? 'Text → 3D Generator' 
+    : vm.chatMode === 'image-to-3d' 
+    ? 'Image → 3D Generator' 
+    : 'AI 3D Generator';
+  const headerSubtitle = vm.chatMode === 'text-to-3d'
+    ? 'Describe your idea and AI will generate an image, then convert it to 3D'
+    : vm.chatMode === 'image-to-3d'
+    ? 'Upload a photo and AI will generate a printable 3D model'
+    : 'Choose your generation method';
 
   return (
     <PageWrapper className="flex flex-col overflow-hidden">
-      <div className="flex flex-col max-w-3xl mx-auto w-full px-4"
-        style={{ height: 'calc(100vh - 4rem)', paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
-
+      <div
+        className="flex flex-col max-w-3xl mx-auto w-full px-4"
+        style={{ height: 'calc(100vh - 4rem)', paddingTop: '1.5rem', paddingBottom: '1.5rem' }}
+      >
         {/* Header */}
         <div className="flex items-center justify-between mb-5 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent">
-              <Wand2 size={20} />
+              <HeaderIcon size={20} />
             </div>
             <div>
-              <h1 className="font-orbitron text-lg font-bold text-text leading-tight">Image → 3D Generator</h1>
-              <p className="text-text-muted text-xs font-exo">Upload a photo and AI will generate a printable 3D model</p>
+              <h1 className="font-orbitron text-lg font-bold text-text leading-tight">{headerTitle}</h1>
+              <p className="text-text-muted text-xs font-exo">{headerSubtitle}</p>
             </div>
           </div>
-          <button onClick={vm.reset} aria-label="Reset"
-            className="flex items-center gap-1.5 px-3 py-1.5 glass border border-border rounded-lg text-xs text-text-muted hover:text-primary hover:border-primary transition-all font-exo">
+          <button
+            onClick={vm.reset}
+            aria-label="Reset"
+            className="flex items-center gap-1.5 px-3 py-1.5 glass border border-border rounded-lg text-xs text-text-muted hover:text-primary hover:border-primary transition-all font-exo"
+          >
             <RotateCcw size={12} /> Reset
           </button>
         </div>
 
         {/* Message feed */}
         <div ref={feedRef} className="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0">
-
-          {/* Empty state */}
-          {vm.messages.length === 0 && !pendingFile && (
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center h-full gap-6 text-center py-8">
-              <div className="w-20 h-20 rounded-3xl bg-accent/10 border border-accent/30 flex items-center justify-center">
-                <Wand2 size={36} className="text-accent" />
-              </div>
-              <div>
-                <h2 className="font-orbitron text-xl font-bold text-text mb-2">Turn any image into a 3D model</h2>
-                <p className="text-text-muted text-sm font-exo max-w-sm">
-                  Upload a reference photo and our AI will generate a printable 3D design for you.
-                </p>
-              </div>
-            </motion.div>
+          {/* Mode selector — shown when no mode selected */}
+          {!vm.chatMode && vm.messages.length === 0 && (
+            <ModeSelector onSelect={handleModeSelect} />
           )}
 
           {/* Messages */}
           <AnimatePresence initial={false}>
-            {vm.messages.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
+            {vm.messages.map(msg => (
+              <MessageBubble key={msg.id} msg={msg} />
+            ))}
           </AnimatePresence>
 
           {/* Typing */}
           {vm.loading && <TypingIndicator />}
 
-          {/* ── 4-stage progress bar — shown during generation ── */}
+          {/* Progress bar during generation */}
           <AnimatePresence>
-            {isGenerating && (
-              <GenerationProgress
-                stage={vm.stage}
-                progress={vm.progress}
+            {isGenerating && <GenerationProgress stage={vm.stage} progress={vm.progress} />}
+          </AnimatePresence>
+
+          {/* Image preview (text-to-3d only) */}
+          <AnimatePresence>
+            {showImagePreview && (
+              <ImagePreview
+                imageUrl={vm.pendingImageUrl!}
+                onApprove={vm.approveImageAndConvertTo3D}
+                onReject={vm.rejectGeneratedImage}
+                loading={vm.loading}
               />
             )}
           </AnimatePresence>
 
-          {/* ── Single 3D canvas — no AnimatePresence, prevents unmount during animation ── */}
-          {showPreview && (
-            <ModelPreview geometry={vm.pendingModel!.geometry} />
-          )}
+          {/* 3D model preview */}
+          {showModelPreview && <ModelPreview geometry={vm.pendingModel!.geometry} />}
 
-          {/* Confirm / Done */}
+          {/* Confirm / Quotation / Quote Ready */}
           <AnimatePresence>
             {vm.chatStep === 'confirm' && vm.pendingModel && (
-              <ConfirmBar onConfirm={vm.confirmModel} onReject={vm.rejectModel} />
+              <ConfirmBar onConfirm={vm.requestQuotation} onReject={vm.rejectModel} />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {(vm.chatStep === 'quotation' || vm.chatStep === 'slicing') && (
+              <QuotationPanel
+                slicingOptions={vm.slicingOptions}
+                onUpdateOptions={vm.updateSlicingOptions}
+                onExecute={vm.executeSlicing}
+                loading={vm.chatStep === 'slicing'}
+              />
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {vm.chatStep === 'quote-ready' && vm.quotationData && vm.pendingModel && (
+              <QuoteReadyPanel
+                quotationData={vm.quotationData}
+                slicingOptions={vm.slicingOptions}
+                modelName={vm.pendingModel.suggestedName}
+                onAddToCart={vm.confirmModel}
+                onRegenerate={vm.rejectModel}
+              />
             )}
           </AnimatePresence>
 
@@ -454,13 +705,24 @@ export default function ChatPage() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom — name form or upload zone */}
+        {/* Bottom input area */}
         <div className="flex-shrink-0 mt-4 space-y-3">
-          {pendingFile ? (
-            <NameForm file={pendingFile} onSubmit={handleSubmit} onCancel={handleCancel} loading={vm.loading} />
-          ) : canUpload ? (
-            <UploadZone onFile={handleFile} disabled={vm.loading} />
-          ) : null}
+          {vm.chatMode === 'image-to-3d' && canInput && (
+            pendingFile ? (
+              <NameForm
+                file={pendingFile}
+                onSubmit={handleImageSubmit}
+                onCancel={handleCancelFile}
+                loading={vm.loading}
+              />
+            ) : (
+              <UploadZone onFile={handleFile} disabled={vm.loading} />
+            )
+          )}
+
+          {vm.chatMode === 'text-to-3d' && canInput && (
+            <TextPromptForm onSubmit={handleTextSubmit} loading={vm.loading} />
+          )}
         </div>
       </div>
     </PageWrapper>

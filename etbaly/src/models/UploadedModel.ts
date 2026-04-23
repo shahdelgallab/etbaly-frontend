@@ -45,7 +45,7 @@ export interface UploadFormValues {
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 export const ACCEPTED_FORMATS: ModelFileFormat[] = ['stl', 'obj', 'glb', 'gltf'];
-export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+export const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MB
 
 export function getFileFormat(filename: string): ModelFileFormat | null {
   const ext = filename.split('.').pop()?.toLowerCase();

@@ -1,4 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import type { BufferGeometry } from 'three';
 import { useCartStore } from '../store/cartStore';
 import { designService } from '../services/designService';
 import { useAppSelector, useAppDispatch } from '../store/hooks';
@@ -20,7 +22,7 @@ export type UploadPhase = 'idle' | 'dragging' | 'validating' | 'ready' | 'added'
 const DEFAULT_FORM: UploadFormValues = {
   name:         '',
   material:     'PLA',
-  color:        '#3b82f6',
+  color:        '#1e3a5f',  // Navy blue
   quantity:     1,
   price:        29.99,
   printQuality: 'standard',
@@ -31,6 +33,7 @@ const DEFAULT_FORM: UploadFormValues = {
 export function useUploadViewModel() {
   const [file, setFile]             = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [geometry, setGeometry]     = useState<BufferGeometry | null>(null);
   const [format, setFormat]         = useState<ModelFileFormat | null>(null);
   const [phase, setPhase]           = useState<UploadPhase>('idle');
   const [error, setError]           = useState<string | null>(null);
@@ -48,7 +51,7 @@ export function useUploadViewModel() {
       return `Unsupported format. Accepted: ${ACCEPTED_FORMATS.map(x => `.${x}`).join(', ')}`;
     }
     if (f.size > MAX_FILE_SIZE_BYTES) {
-      return `File too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Max 50 MB.`;
+      return `File too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Max 200 MB.`;
     }
     return null;
   };
@@ -73,9 +76,32 @@ export function useUploadViewModel() {
     setError(null);
     setFile(f);
     setFormat(fmt);
-    setPreviewUrl(fmt === 'glb' || fmt === 'gltf' ? url : null);
+    setGeometry(null);
     setForm(prev => ({ ...prev, name: f.name.replace(/\.[^.]+$/, '') }));
-    setPhase('ready');
+
+    if (fmt === 'glb' || fmt === 'gltf') {
+      // GLB/GLTF: use object URL directly in ModelViewerCanvas
+      setPreviewUrl(url);
+      setPhase('ready');
+    } else if (fmt === 'stl') {
+      // STL: parse client-side into BufferGeometry for Three.js canvas
+      setPreviewUrl(url); // keep url for cart
+      f.arrayBuffer().then(buffer => {
+        const loader = new STLLoader();
+        const geom   = loader.parse(buffer);
+        geom.center();
+        geom.computeVertexNormals();
+        setGeometry(geom);
+        setPhase('ready');
+      }).catch(() => {
+        setError('Failed to parse STL file.');
+        setPhase('idle');
+      });
+    } else {
+      // OBJ: no client-side preview
+      setPreviewUrl(url);
+      setPhase('ready');
+    }
   }, []);
 
   // ── Drag events ──
@@ -168,6 +194,7 @@ export function useUploadViewModel() {
     }
     setFile(null);
     setPreviewUrl(null);
+    setGeometry(null);
     setFormat(null);
     setError(null);
     setPhase('idle');
@@ -175,13 +202,14 @@ export function useUploadViewModel() {
   }, []);
 
   // ── Derived ──
-  const fileSizeMB  = file ? (file.size / 1024 / 1024).toFixed(2) : null;
-  const canPreview  = previewUrl !== null;
+  const fileSizeMB   = file ? (file.size / 1024 / 1024).toFixed(2) : null;
+  const canPreview   = previewUrl !== null || geometry !== null;
   const canAddToCart = phase === 'ready' || phase === 'added';
 
   return {
     file,
     previewUrl,
+    geometry,
     format,
     phase,
     error,

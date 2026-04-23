@@ -48,7 +48,7 @@ function computeCamera(geometry: THREE.BufferGeometry): {
 function GeometryMesh({ geometry }: { geometry: THREE.BufferGeometry }) {
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial color="#3b82f6" metalness={0.3} roughness={0.4} />
+      <meshStandardMaterial color="#1e3a5f" metalness={0.3} roughness={0.4} />
     </mesh>
   );
 }

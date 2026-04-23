@@ -16,7 +16,7 @@ export default function AuthPanel() {
         <svg width="100%" height="100%">
           <defs>
             <pattern id="auth-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#3b82f6" strokeWidth="0.5" />
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e3a5f" strokeWidth="0.5" />
             </pattern>
           </defs>
           <rect width="100%" height="100%" fill="url(#auth-grid)" />
@@ -31,9 +31,9 @@ export default function AuthPanel() {
       <div className="relative z-10">
         <div className="flex items-center gap-2 mb-2">
           <svg width="20" height="22" viewBox="0 0 20 22" fill="none" aria-hidden="true">
-            <rect x="6" y="1" width="8" height="11" rx="2" fill="#3b82f6" opacity="0.9" />
-            <polygon points="6,12 14,12 12,19 8,19" fill="#00d4ff" opacity="0.7" />
-            <circle cx="10" cy="20.5" r="1.5" fill="#3b82f6" />
+            <rect x="6" y="1" width="8" height="11" rx="2" fill="#1e3a5f" opacity="0.9" />
+            <polygon points="6,12 14,12 12,19 8,19" fill="#6b7c3f" opacity="0.7" />
+            <circle cx="10" cy="20.5" r="1.5" fill="#1e3a5f" />
           </svg>
           <span className="font-orbitron text-xl font-black text-white tracking-widest">ETBALY</span>
         </div>
@@ -47,21 +47,21 @@ export default function AuthPanel() {
         transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
       >
         <svg width="160" height="200" viewBox="0 0 160 200" fill="none" aria-hidden="true">
-          <rect x="55" y="10" width="50" height="90" rx="10" fill="#3b82f6" opacity="0.15" />
-          <rect x="55" y="10" width="50" height="90" rx="10" stroke="#3b82f6" strokeWidth="1.5" opacity="0.5" />
-          <rect x="63" y="80" width="34" height="20" rx="3" fill="#3b82f6" opacity="0.3" />
-          <polygon points="63,100 97,100 90,145 70,145" fill="#00d4ff" opacity="0.2" />
-          <polygon points="63,100 97,100 90,145 70,145" stroke="#00d4ff" strokeWidth="1" opacity="0.5" />
-          <rect x="74" y="145" width="12" height="6" rx="2" fill="#00d4ff" opacity="0.7" />
+          <rect x="55" y="10" width="50" height="90" rx="10" fill="#1e3a5f" opacity="0.15" />
+          <rect x="55" y="10" width="50" height="90" rx="10" stroke="#1e3a5f" strokeWidth="1.5" opacity="0.5" />
+          <rect x="63" y="80" width="34" height="20" rx="3" fill="#1e3a5f" opacity="0.3" />
+          <polygon points="63,100 97,100 90,145 70,145" fill="#6b7c3f" opacity="0.2" />
+          <polygon points="63,100 97,100 90,145 70,145" stroke="#6b7c3f" strokeWidth="1" opacity="0.5" />
+          <rect x="74" y="145" width="12" height="6" rx="2" fill="#6b7c3f" opacity="0.7" />
           <motion.line
             x1="80" y1="151" x2="80" y2="185"
-            stroke="#00d4ff" strokeWidth="2.5" strokeLinecap="round"
+            stroke="#6b7c3f" strokeWidth="2.5" strokeLinecap="round"
             animate={{ y2: [185, 168, 185] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
           <motion.circle
             cx="80" cy="151" r="4"
-            fill="#00d4ff"
+            fill="#6b7c3f"
             animate={{ opacity: [0.4, 1, 0.4], r: [3, 6, 3] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
