@@ -92,11 +92,12 @@ export interface ApiProduct {
 export type ApiMaterialType = 'PLA' | 'ABS' | 'Resin' | 'TPU' | 'PETG';
 
 export interface ApiDesign {
-  _id:         string;
-  name:        string;
-  isPrintable: boolean;
-  fileUrl:     string;
-  ownerId:     string;
+  _id:          string;
+  name:         string;
+  isPrintable:  boolean;
+  fileUrl:      string;
+  thumbnailUrl?: string;
+  ownerId:      string;
   metadata: {
     volumeCm3:           number;
     dimensions:          { x: number; y: number; z: number };
@@ -118,13 +119,24 @@ export interface ApiCustomization {
   materialId?:        string;
 }
 
+export interface ApiCartItemPrintingProperties {
+  material?: string;
+  color?:    string;
+  scale?:    number;
+  preset?:   string;
+}
+
 export interface ApiCartItem {
-  _id:           string;
-  itemType:      'Product' | 'Design';
-  itemRefId:     string;
-  quantity:      number;
-  unitPrice:     number;
-  customization?: ApiCustomization;
+  _id:                string;
+  itemType:           'Product' | 'Design';
+  itemRefId:          string;
+  quantity:           number;
+  unitPrice:          number;
+  thumbnailUrl?:      string;
+  name?:              string;
+  itemName?:          string;
+  printingProperties?: ApiCartItemPrintingProperties;
+  customization?:     ApiCustomization;
 }
 
 export interface ApiPricingSummary {

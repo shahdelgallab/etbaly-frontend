@@ -15,6 +15,7 @@ import { AuthenticatedImage } from '../components/AuthenticatedImage';
 import { QuotationPanel, QuoteReadyPanel } from '../components/QuotationPanel';
 import type { ChatMessage } from '../../models/ChatMessage';
 import type { GenerationStage } from '../../viewmodels/useChatViewModel';
+import { pauseLenis, resumeLenis } from '../../lib/lenis';
 
 // ─── Stage config ─────────────────────────────────────────────────────────────
 
@@ -564,12 +565,23 @@ export default function ChatPage() {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const feedRef = useRef<HTMLDivElement>(null);
 
+  // Lock page scroll while chat is mounted — only the feed should scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    pauseLenis();
+    return () => {
+      document.body.style.overflow = '';
+      resumeLenis();
+    };
+  }, []);
+
   // Auto-scroll on new messages
   useEffect(() => {
     if (feedRef.current) {
       feedRef.current.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [vm.messages.length, vm.chatStep]);
+
 
   const handleModeSelect = (mode: ChatMode) => {
     vm.setChatMode(mode);
@@ -589,7 +601,7 @@ export default function ChatPage() {
     await vm.generateImageFromText(prompt, name);
   };
 
-  const canInput = vm.chatStep === 'idle' || vm.chatStep === 'done';
+  const canInput = vm.chatStep === 'idle';
   const isGenerating = vm.chatStep === 'generating';
   const showImagePreview = vm.chatStep === 'image-preview' && vm.pendingImageUrl;
   const showModelPreview = (vm.chatStep === 'confirm' || vm.chatStep === 'done') && vm.pendingModel?.geometry;
@@ -608,10 +620,10 @@ export default function ChatPage() {
     : 'Choose your generation method';
 
   return (
-    <PageWrapper className="flex flex-col overflow-hidden">
+    <PageWrapper className="h-screen overflow-hidden flex flex-col">
       <div
-        className="flex flex-col max-w-3xl mx-auto w-full px-4"
-        style={{ height: 'calc(100vh - 4rem)', paddingTop: '1.5rem', paddingBottom: '1.5rem' }}
+        className="flex flex-col max-w-3xl mx-auto w-full px-4 flex-1 min-h-0"
+        style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-5 flex-shrink-0">
@@ -634,7 +646,7 @@ export default function ChatPage() {
         </div>
 
         {/* Message feed */}
-        <div ref={feedRef} className="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0">
+        <div ref={feedRef} data-lenis-prevent className="flex-1 overflow-y-auto space-y-4 pr-1 min-h-0 overscroll-contain">
           {/* Mode selector — shown when no mode selected */}
           {!vm.chatMode && vm.messages.length === 0 && (
             <ModeSelector onSelect={handleModeSelect} />
@@ -695,7 +707,7 @@ export default function ChatPage() {
                 slicingOptions={vm.slicingOptions}
                 modelName={vm.pendingModel.suggestedName}
                 onAddToCart={vm.confirmModel}
-                onRegenerate={vm.rejectModel}
+                onBackToOptions={vm.backToOptions}
               />
             )}
           </AnimatePresence>

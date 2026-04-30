@@ -84,21 +84,15 @@ export function AuthenticatedImage({ src, alt, className, onError, onLoad }: Aut
   if (loading) {
     return (
       <div className={`${className} flex items-center justify-center bg-surface/50 animate-pulse`}>
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          <span className="text-xs text-text-muted font-exo">Loading image...</span>
-        </div>
+        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
 
   if (error || !blobUrl) {
     return (
-      <div className={`${className} flex items-center justify-center bg-surface/50 border border-border rounded-xl p-4`}>
-        <div className="text-center">
-          <p className="text-sm text-text-muted font-exo mb-1">Failed to load image</p>
-          <p className="text-xs text-text-muted/60 font-mono break-all">{src}</p>
-        </div>
+      <div className={`${className} flex items-center justify-center bg-surface/50`}>
+        <span className="text-[10px] text-text-muted font-sans text-center px-1">No image</span>
       </div>
     );
   }

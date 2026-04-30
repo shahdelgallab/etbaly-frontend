@@ -174,14 +174,14 @@ export default function LandingPage() {
       {/* ═══ AI FEATURE SECTION ═══ */}
       <section 
         ref={aiRef.ref as React.RefObject<HTMLElement>}
-        className="gradient-bg relative min-h-screen flex items-center px-6 py-20"
+        className="relative min-h-screen flex items-center px-6 py-20"
         style={{
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',
+          background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)',
         }}
       >
-        {/* Purple/blue gradient blobs */}
-        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full bg-accent-2 opacity-10 blur-[120px]" />
-        <div className="absolute bottom-0 right-0 w-[700px] h-[700px] rounded-full bg-accent-3 opacity-10 blur-[120px]" />
+        {/* Subtle light blobs for depth */}
+        <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full bg-white opacity-5 blur-[120px]" />
+        <div className="absolute bottom-0 right-0 w-[700px] h-[700px] rounded-full bg-white opacity-5 blur-[120px]" />
 
         <div className="max-w-7xl mx-auto w-full relative z-10">
           <motion.div
@@ -190,27 +190,27 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <div className="chapter-number mx-auto">03</div>
-            <p className="section-label mb-6">/ TECHNOLOGY</p>
-            <h2 className="font-display text-hero text-text leading-none mb-8">
+            <div className="font-display text-white/20 leading-none" style={{ fontSize: 'clamp(80px, 12vw, 160px)' }}>03</div>
+            <p className="section-label mb-6 text-white/60">/ TECHNOLOGY</p>
+            <h2 className="font-display text-hero text-white leading-none mb-8">
               AI-POWERED<br />DESIGN
             </h2>
-            <p className="text-text-muted font-body text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+            <p className="font-body text-xl max-w-2xl mx-auto mb-12 leading-relaxed text-white/75">
               Describe your idea in plain language or upload a reference image. Our AI generates a complete 3D model in seconds. No CAD skills required.
             </p>
 
             {/* Large visual placeholder */}
             <div className="max-w-4xl mx-auto mb-12">
-              <div className="aspect-video rounded-lg border border-border bg-surface-2 flex items-center justify-center">
+              <div className="aspect-video rounded-lg border border-white/20 bg-white/10 flex items-center justify-center">
                 <div className="text-center">
-                  <Bot size={64} className="text-primary mx-auto mb-4" />
-                  <p className="text-text-muted font-body">AI Chat Preview</p>
+                  <Bot size={64} className="text-white/60 mx-auto mb-4" />
+                  <p className="font-body text-white/60">AI Chat Preview</p>
                 </div>
               </div>
             </div>
 
             <Link to="/chat" className="cursor-hover">
-              <button className="btn-primary flex items-center gap-2 mx-auto">
+              <button className="btn-primary flex items-center gap-2 mx-auto" style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)', color: '#fff' }}>
                 <Zap size={18} /> TRY IT NOW
               </button>
             </Link>

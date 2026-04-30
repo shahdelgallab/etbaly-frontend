@@ -10,17 +10,17 @@ interface QueueJobData {
 }
 
 export interface JobResultImageTo3D {
-  success:   boolean;
-  designId?: string;
-  fileId?:   string;
-  publicUrl?: string;   // STL public URL
-  isMock?:   boolean;
+  success:    boolean;
+  designId?:  string;
+  fileId?:    string;
+  publicUrl?: string;
+  isMock?:    boolean;
 }
 
 export interface JobResultTextToImage {
   success:          boolean;
   imageFileId?:     string;
-  imagePublicUrl?:  string;  // generated image URL
+  imagePublicUrl?:  string;
 }
 
 export interface JobStatus {
@@ -35,20 +35,20 @@ export interface JobStatus {
   processing?: boolean;
   failed?:     boolean;
   error?:      string;
-  // result is either image-to-3d or text-to-image result
   result?:     JobResultImageTo3D & JobResultTextToImage;
 }
 
 interface LightningUrlData { url: string }
 
-// ─── User endpoints ───────────────────────────────────────────────────────────
+// ─── Service ──────────────────────────────────────────────────────────────────
 
 export const aiService = {
+  // ── User endpoints ──────────────────────────────────────────────────────────
 
   /**
    * POST /api/v1/ai/image-to-3d
-   * Submits an image file for 3D model generation.
-   * Returns the jobId for polling (queue: AI_GENERATION).
+   * Submits an image for 3D model generation.
+   * Returns jobId for polling (queue: AI_GENERATION).
    */
   imageTo3D: (image: File, designName: string): Promise<string> => {
     const form = new FormData();
@@ -59,8 +59,7 @@ export const aiService = {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       .then(r => {
-        // Handle both response shapes
-        const d = r.data as unknown as { data?: { data?: { jobId?: string }; jobId?: string }; success?: boolean };
+        const d = r.data as unknown as { data?: { data?: { jobId?: string }; jobId?: string } };
         return (d?.data?.data?.jobId ?? d?.data?.jobId ?? '') as string;
       });
   },
@@ -68,7 +67,7 @@ export const aiService = {
   /**
    * POST /api/v1/ai/text-to-image
    * Submits a text prompt for image generation.
-   * Returns the jobId for polling (queue: TEXT_TO_IMAGE).
+   * Returns jobId for polling (queue: TEXT_TO_IMAGE).
    */
   textToImage: (prompt: string, designName: string): Promise<string> =>
     api
@@ -83,23 +82,68 @@ export const aiService = {
 
   /**
    * GET /api/v1/ai/job/:queueName/:jobId
-   * Polls job status. queueName is 'AI_GENERATION' or 'TEXT_TO_IMAGE'.
+   * Polls job status. queueName: 'AI_GENERATION' | 'TEXT_TO_IMAGE'
    */
   getJobStatus: (queueName: string, jobId: string): Promise<JobStatus> =>
     api
       .get<ApiSuccess<JobStatus>>(`/ai/job/${queueName}/${jobId}`)
       .then(r => r.data.data),
 
-  // ── Admin ──────────────────────────────────────────────────────────────────
+  // ── Admin endpoints ──────────────────────────────────────────────────────────
 
+  /**
+   * POST /api/v1/admin/ai/set-text-to-image-url
+   */
+  setTextToImageUrl: (url: string): Promise<string> =>
+    api.post<ApiSuccess<LightningUrlData>>('/admin/ai/set-text-to-image-url', { url })
+      .then(r => r.data.data.url),
+
+  /**
+   * GET /api/v1/admin/ai/text-to-image-url
+   */
+  getTextToImageUrl: (): Promise<string> =>
+    api.get<ApiSuccess<LightningUrlData>>('/admin/ai/text-to-image-url')
+      .then(r => r.data.data.url),
+
+  /**
+   * DELETE /api/v1/admin/ai/text-to-image-url/cache
+   */
+  clearTextToImageUrlCache: (): Promise<void> =>
+    api.delete('/admin/ai/text-to-image-url/cache').then(() => undefined),
+
+  /**
+   * POST /api/v1/admin/ai/set-image-to-3d-url
+   */
+  setImageTo3dUrl: (url: string): Promise<string> =>
+    api.post<ApiSuccess<LightningUrlData>>('/admin/ai/set-image-to-3d-url', { url })
+      .then(r => r.data.data.url),
+
+  /**
+   * GET /api/v1/admin/ai/image-to-3d-url
+   */
+  getImageTo3dUrl: (): Promise<string> =>
+    api.get<ApiSuccess<LightningUrlData>>('/admin/ai/image-to-3d-url')
+      .then(r => r.data.data.url),
+
+  /**
+   * DELETE /api/v1/admin/ai/image-to-3d-url/cache
+   */
+  clearImageTo3dUrlCache: (): Promise<void> =>
+    api.delete('/admin/ai/image-to-3d-url/cache').then(() => undefined),
+
+  // ── Legacy aliases (kept for backward compatibility with AdminPage) ──────────
+
+  /** @deprecated Use setImageTo3dUrl() instead */
   setLightningUrl: (url: string): Promise<string> =>
-    api.post<ApiSuccess<LightningUrlData>>('/admin/ai/set-lightning-url', { url })
+    api.post<ApiSuccess<LightningUrlData>>('/admin/ai/set-image-to-3d-url', { url })
       .then(r => r.data.data.url),
 
+  /** @deprecated Use getImageTo3dUrl() instead */
   getLightningUrl: (): Promise<string> =>
-    api.get<ApiSuccess<LightningUrlData>>('/admin/ai/lightning-url')
+    api.get<ApiSuccess<LightningUrlData>>('/admin/ai/image-to-3d-url')
       .then(r => r.data.data.url),
 
+  /** @deprecated Use clearImageTo3dUrlCache() instead */
   clearLightningUrlCache: (): Promise<void> =>
-    api.delete('/admin/ai/lightning-url/cache').then(() => undefined),
+    api.delete('/admin/ai/image-to-3d-url/cache').then(() => undefined),
 };

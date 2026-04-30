@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { cartService } from '../../services/cartService';
 import type { ApiCart } from '../../types/api';
-import type { AddCartItemPayload } from '../../services/cartService';
+import type { AddCartPayload } from '../../services/cartService';
 
 interface CartState {
   cart:    ApiCart | null;
@@ -36,7 +36,7 @@ export const fetchCartThunk = createAsyncThunk(
 
 export const addCartItemThunk = createAsyncThunk(
   'cart/addItem',
-  async (payload: AddCartItemPayload, { rejectWithValue }) => {
+  async (payload: AddCartPayload, { rejectWithValue }) => {
     try { return await cartService.addItem(payload); }
     catch (e) { return rejectWithValue(extractMsg(e)); }
   }
@@ -74,6 +74,23 @@ const cartSlice = createSlice({
   reducers: {
     openCart:  (state) => { state.isOpen = true;  },
     closeCart: (state) => { state.isOpen = false; },
+    /** Patch a cart item's display fields optimistically (name, thumbnailUrl) */
+    patchItemDisplay: (
+      state,
+      action: { payload: { itemRefId: string; name?: string; thumbnailUrl?: string } }
+    ) => {
+      if (!state.cart) return;
+      const { itemRefId, name, thumbnailUrl } = action.payload;
+      state.cart.items = state.cart.items.map(item =>
+        item.itemRefId === itemRefId
+          ? {
+              ...item,
+              ...(name         ? { name }         : {}),
+              ...(thumbnailUrl ? { thumbnailUrl }  : {}),
+            }
+          : item
+      );
+    },
   },
   extraReducers: (builder) => {
     const setCart = (state: CartState, action: { payload: ApiCart }) => {
@@ -109,5 +126,5 @@ const cartSlice = createSlice({
   },
 });
 
-export const { openCart, closeCart } = cartSlice.actions;
+export const { openCart, closeCart, patchItemDisplay } = cartSlice.actions;
 export default cartSlice.reducer;

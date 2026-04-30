@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Download, CheckCircle2, XCircle, Clock, Weight, Ruler, DollarSign } from 'lucide-react';
 import { useSlicingViewModel } from '../../viewmodels/useSlicingViewModel';
+import { materialService } from '../../services/materialService';
+import type { Material } from '../../models/Material';
 import type { SlicingPreset } from '../../models/SlicingJob';
 
 interface SlicingPanelProps {
@@ -13,11 +15,32 @@ interface SlicingPanelProps {
 export function SlicingPanel({ designId, designName, onComplete }: SlicingPanelProps) {
   const slicing = useSlicingViewModel();
   const [material, setMaterial] = useState('PLA');
+  const [color, setColor] = useState('White');
   const [preset, setPreset] = useState<SlicingPreset>('normal');
   const [scale, setScale] = useState(100);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [matsLoading, setMatsLoading] = useState(true);
+
+  useEffect(() => {
+    materialService.getActive()
+      .then(mats => {
+        setMaterials(mats);
+        if (mats.length > 0) setMaterial(mats[0].type);
+      })
+      .catch(() => {
+        setMaterials([
+          { type: 'PLA',  name: 'PLA',  pricePerGram: 0 },
+          { type: 'ABS',  name: 'ABS',  pricePerGram: 0 },
+          { type: 'PETG', name: 'PETG', pricePerGram: 0 },
+          { type: 'TPU',  name: 'TPU',  pricePerGram: 0 },
+          { type: 'Resin',name: 'Resin',pricePerGram: 0 },
+        ]);
+      })
+      .finally(() => setMatsLoading(false));
+  }, []);
 
   const handleSlice = async () => {
-    await slicing.executeSlicing(designId, material, preset, scale);
+    await slicing.executeSlicing(designId, material, preset, scale, color);
   };
 
   const handleDownload = () => {
@@ -49,18 +72,37 @@ export function SlicingPanel({ designId, designName, onComplete }: SlicingPanelP
             <label className="block text-sm font-body font-medium text-text mb-2">
               Material
             </label>
-            <select
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
-              className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text font-body text-sm focus:outline-none focus:border-primary transition-colors"
-            >
-              <option value="PLA">PLA</option>
-              <option value="ABS">ABS</option>
-              <option value="PETG">PETG</option>
-              <option value="PLA+">PLA+</option>
-              <option value="TPU">TPU</option>
-              <option value="Nylon">Nylon</option>
-            </select>
+            {matsLoading ? (
+              <div className="flex items-center gap-2 py-2 text-text-muted text-xs font-body">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading materials…
+              </div>
+            ) : (
+              <select
+                value={material}
+                onChange={e => setMaterial(e.target.value)}
+                className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text font-body text-sm focus:outline-none focus:border-primary transition-colors"
+              >
+                {materials.map(m => (
+                  <option key={m.type} value={m.type}>
+                    {m.name}{m.pricePerGram > 0 ? ` — $${m.pricePerGram.toFixed(3)}/g` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          {/* Color */}
+          <div>
+            <label className="block text-sm font-body font-medium text-text mb-2">
+              Color <span className="text-text-muted font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              placeholder="e.g. Red, Blue, Black"
+              className="w-full bg-surface border border-border rounded-lg px-4 py-2.5 text-text font-body text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-text-muted"
+            />
           </div>
 
           {/* Preset */}
@@ -110,7 +152,8 @@ export function SlicingPanel({ designId, designName, onComplete }: SlicingPanelP
           {/* Start Button */}
           <button
             onClick={handleSlice}
-            className="w-full bg-primary text-white py-3 rounded-lg font-display text-lg tracking-wide hover:bg-primary-dark transition-colors"
+            disabled={matsLoading}
+            className="w-full bg-primary text-white py-3 rounded-lg font-display text-lg tracking-wide hover:bg-primary-dark transition-colors disabled:opacity-50"
           >
             Start Slicing
           </button>
@@ -137,7 +180,7 @@ export function SlicingPanel({ designId, designName, onComplete }: SlicingPanelP
                 </p>
                 {slicing.job && (
                   <p className="text-xs text-text-muted font-body">
-                    Job: {slicing.job.jobNumber}
+                    Job ID: {slicing.job.jobId}
                   </p>
                 )}
               </div>
@@ -173,9 +216,11 @@ export function SlicingPanel({ designId, designName, onComplete }: SlicingPanelP
                 <p className="text-sm font-body font-medium text-success">
                   Slicing Complete!
                 </p>
-                <p className="text-xs text-text-muted font-body">
-                  Job: {slicing.job.jobNumber}
-                </p>
+                {slicing.job?.designName && (
+                  <p className="text-xs text-text-muted font-body">
+                    {slicing.job.designName}
+                  </p>
+                )}
               </div>
             </div>
 

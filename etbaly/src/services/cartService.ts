@@ -1,26 +1,45 @@
 import api from './api';
-import type { ApiSuccess, ApiCart, ApiCustomization, ApiOrder } from '../types/api';
+import type { ApiSuccess, ApiCart, ApiOrder } from '../types/api';
 
-export interface AddCartItemPayload {
-  itemType:       'Product' | 'Design';
-  itemRefId:      string;
-  quantity:       number;
-  materialId?:    string;        // required when itemType === 'Design'
-  customization?: ApiCustomization;
+export interface PrintingProperties {
+  material: 'PLA' | 'ABS' | 'PETG' | 'TPU' | 'Resin';
+  color?: string; // Color name: 'Red' | 'Green' | 'Blue'
+  scale?: number;
+  preset?: 'heavy' | 'normal' | 'draft';
+  customFields?: Array<{ key: string; value: string }>;
 }
 
+export interface AddCartItemPayload {
+  itemType: 'Product' | 'Design';
+  itemRefId: string;
+  quantity: number;
+  printingProperties?: PrintingProperties;
+}
+
+export interface AddCartItemBySlicingJobPayload {
+  slicingJobId: string;
+  quantity: number;
+}
+
+export type AddCartPayload = AddCartItemPayload | AddCartItemBySlicingJobPayload;
+
 export interface UpdateCartItemPayload {
-  quantity: number;              // API only accepts quantity on PATCH
+  quantity: number;
 }
 
 export interface CheckoutPayload {
-  shippingAddressId: string;     // _id of a saved address in user's profile
-  paymentMethod:     'Card' | 'Wallet' | 'COD';
+  shippingAddress: {
+    street: string;
+    city: string;
+    country: string;
+    zip: string;
+  };
+  paymentMethod: 'Card' | 'Wallet' | 'COD';
 }
 
 // ─── Response wrappers ────────────────────────────────────────────────────────
 
-interface CartData  { cart: ApiCart }
+interface CartData { cart: ApiCart }
 interface OrderData { order: ApiOrder }
 
 export const cartService = {
@@ -29,7 +48,7 @@ export const cartService = {
     api.get<ApiSuccess<CartData>>('/cart').then(r => r.data.data.cart),
 
   // POST /api/v1/cart/items  →  { data: { cart: ApiCart } }
-  addItem: (payload: AddCartItemPayload) =>
+  addItem: (payload: AddCartPayload) =>
     api.post<ApiSuccess<CartData>>('/cart/items', payload)
       .then(r => r.data.data.cart),
 

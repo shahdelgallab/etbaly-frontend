@@ -10,7 +10,6 @@ export interface SlicingJobDimensions {
 
 export interface SlicingJob {
   jobId: string;
-  jobNumber: string;
   designId: string;
   designName?: string;
   status: SlicingJobStatus;
@@ -30,13 +29,13 @@ export interface SlicingJob {
 export interface CreateSlicingJobRequest {
   designId: string;
   material?: string;
+  color?: string;
   preset?: SlicingPreset;
   scale?: number;
 }
 
 export interface CreateSlicingJobResponse {
   jobId: string;
-  jobNumber: string;
   status: SlicingJobStatus;
   designId: string;
   designName: string;

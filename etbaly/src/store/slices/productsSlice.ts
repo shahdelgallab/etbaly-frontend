@@ -31,7 +31,9 @@ export const fetchProductsThunk = createAsyncThunk(
   async (params: ProductQuery | undefined, { rejectWithValue }) => {
     try {
       const data = await productService.getAll(params);
-      return { products: data.products, total: data.total };
+      // API returns both `total` (DB total) and `results` (page count)
+      // Use total if available, fall back to results count
+      return { products: data.products ?? [], total: data.total ?? data.results ?? 0 };
     } catch (e) { return rejectWithValue(extractMsg(e)); }
   }
 );

@@ -9,6 +9,7 @@ import ThemeToggle from './views/components/ThemeToggle';
 import CustomCursor from './views/components/CustomCursor';
 import { useAppDispatch, useAppSelector } from './store/hooks';
 import { setUser, setHydrating } from './store/slices/authSlice';
+import { fetchCartThunk } from './store/slices/cartSlice';
 import { tokenStorage } from './services/api';
 import { userService } from './services/userService';
 import { initLenis, destroyLenis } from './lib/lenis';
@@ -29,6 +30,7 @@ const UploadPage    = lazy(() => import('./views/pages/UploadPage'));
 const CheckoutPage  = lazy(() => import('./views/pages/CheckoutPage'));
 const ProfilePage   = lazy(() => import('./views/pages/ProfilePage'));
 const AdminPage     = lazy(() => import('./views/pages/AdminPage'));
+const SlicingHistoryPage = lazy(() => import('./views/pages/SlicingHistoryPage'));
 
 // ─── Route-level loading fallback ────────────────────────────────────────────
 
@@ -53,7 +55,7 @@ export default function App() {
 
   // Initialize Lenis smooth scroll
   useEffect(() => {
-    const lenis = initLenis();
+    initLenis();
     return () => destroyLenis();
   }, []);
 
@@ -63,7 +65,11 @@ export default function App() {
     const token = tokenStorage.getAccess();
     if (!token) { dispatch(setHydrating(false)); return; }
     userService.getMe()
-      .then(apiUser => dispatch(setUser(apiUser)))
+      .then(apiUser => {
+        dispatch(setUser(apiUser));
+        // Fetch backend cart for authenticated user
+        dispatch(fetchCartThunk());
+      })
       .catch(() => tokenStorage.clearTokens())
       .finally(() => dispatch(setHydrating(false)));
   }, [dispatch, user]);
@@ -109,6 +115,9 @@ export default function App() {
               } />
               <Route path="/admin" element={
                <AdminPage />
+              } />
+              <Route path="/history" element={
+               <SlicingHistoryPage />
               } />
 
               {/* ── Fallback ── */}

@@ -9,6 +9,7 @@ import {
   Check, AlertCircle, Banknote, Shield, Printer,
 } from 'lucide-react';
 import { useCheckoutViewModel } from '../../viewmodels/useCheckoutViewModel';
+import { AuthenticatedImage } from '../components/AuthenticatedImage';
 import PageWrapper from '../components/PageWrapper';
 import type { ShippingForm, PaymentForm } from '../../viewmodels/useCheckoutViewModel';
 
@@ -120,7 +121,15 @@ function OrderSummary({ vm }: { vm: VM }) {
           <div key={item.id} className="flex gap-3 items-center">
             <div className="w-12 h-12 rounded-lg bg-surface border border-border overflow-hidden flex-shrink-0">
               {item.product.imageUrl ? (
-                <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                item.product.imageUrl.includes('/files/proxy') ? (
+                  <AuthenticatedImage
+                    src={item.product.imageUrl}
+                    alt={item.product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-primary/30 font-orbitron text-xs">3D</div>
               )}
@@ -464,7 +473,15 @@ function ReviewStep({ vm, onBack }: { vm: VM; onBack: () => void }) {
           <div key={item.id} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
             <div className="w-10 h-10 rounded-lg bg-surface border border-border overflow-hidden flex-shrink-0">
               {item.product.imageUrl ? (
-                <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                item.product.imageUrl.includes('/files/proxy') ? (
+                  <AuthenticatedImage
+                    src={item.product.imageUrl}
+                    alt={item.product.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-primary/30 font-orbitron text-[10px]">3D</div>
               )}

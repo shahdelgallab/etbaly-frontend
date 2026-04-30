@@ -43,7 +43,13 @@ const SOCIAL = [
 
 export default function Footer() {
   return (
-    <footer className="mt-auto border-t border-[#333]" style={{ background: '#1a1a1a' }}>
+    <footer
+      className="mt-auto"
+      style={{
+        background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%)',
+        borderTop: '1px solid rgba(255,255,255,0.15)',
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 pt-12 pb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
 
@@ -52,7 +58,7 @@ export default function Footer() {
             <Link to="/" className="inline-block mb-4" aria-label="Etbaly home">
               <span className="text-xl font-bold font-display text-white">Etbaly</span>
             </Link>
-            <p className="text-sm leading-relaxed mb-5" style={{ color: '#c9b99a' }}>
+            <p className="text-sm leading-relaxed mb-5 text-white/70">
               Print the future. Today.<br />
               Your one-stop platform for custom 3D printing — powered by AI.
             </p>
@@ -64,10 +70,8 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.label}
-                  className="w-8 h-8 rounded-md flex items-center justify-center transition-colors"
-                  style={{ background: '#2a2a2a', border: '1px solid #333', color: '#c9b99a' }}
-                  onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                  onMouseLeave={e => (e.currentTarget.style.color = '#c9b99a')}
+                  className="w-8 h-8 rounded-md flex items-center justify-center transition-colors text-white/70 hover:text-white"
+                  style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
                 >
                   {s.icon}
                 </a>
@@ -77,15 +81,13 @@ export default function Footer() {
 
           {/* Navigate */}
           <div>
-            <h3 className="text-xs font-semibold tracking-wider mb-4 uppercase font-sans" style={{ color: '#fff' }}>
+            <h3 className="text-xs font-semibold tracking-wider mb-4 uppercase font-sans text-white">
               Navigate
             </h3>
             <ul className="space-y-2.5">
               {NAV_LINKS.map((l) => (
                 <li key={l.to}>
-                  <Link to={l.to} className="text-sm font-sans transition-colors" style={{ color: '#c9b99a' }}
-                    onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                    onMouseLeave={e => (e.currentTarget.style.color = '#c9b99a')}>
+                  <Link to={l.to} className="text-sm font-sans text-white/70 hover:text-white transition-colors">
                     {l.label}
                   </Link>
                 </li>
@@ -95,34 +97,34 @@ export default function Footer() {
 
           {/* Materials */}
           <div>
-            <h3 className="text-xs font-semibold tracking-wider mb-4 uppercase font-sans" style={{ color: '#fff' }}>
+            <h3 className="text-xs font-semibold tracking-wider mb-4 uppercase font-sans text-white">
               Materials
             </h3>
             <ul className="space-y-2.5">
               {MATERIALS.map((m) => (
-                <li key={m} className="text-sm font-sans" style={{ color: '#c9b99a' }}>{m}</li>
+                <li key={m} className="text-sm font-sans text-white/70">{m}</li>
               ))}
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-xs font-semibold tracking-wider mb-4 uppercase font-sans" style={{ color: '#fff' }}>
+            <h3 className="text-xs font-semibold tracking-wider mb-4 uppercase font-sans text-white">
               Contact
             </h3>
             <ul className="space-y-3">
-              <li className="flex items-start gap-2.5 text-sm font-sans" style={{ color: '#c9b99a' }}>
-                <Mail size={14} className="text-primary shrink-0 mt-0.5" />
+              <li className="flex items-start gap-2.5 text-sm font-sans text-white/70">
+                <Mail size={14} className="text-white/50 shrink-0 mt-0.5" />
                 <a href="mailto:hello@etbaly.io" className="transition-colors hover:text-white">
                   hello@etbaly.io
                 </a>
               </li>
-              <li className="flex items-start gap-2.5 text-sm font-sans" style={{ color: '#c9b99a' }}>
-                <MapPin size={14} className="text-primary shrink-0 mt-0.5" />
+              <li className="flex items-start gap-2.5 text-sm font-sans text-white/70">
+                <MapPin size={14} className="text-white/50 shrink-0 mt-0.5" />
                 <span>Cairo, Egypt</span>
               </li>
-              <li className="flex items-start gap-2.5 text-sm font-sans" style={{ color: '#c9b99a' }}>
-                <ExternalLink size={14} className="text-primary shrink-0 mt-0.5" />
+              <li className="flex items-start gap-2.5 text-sm font-sans text-white/70">
+                <ExternalLink size={14} className="text-white/50 shrink-0 mt-0.5" />
                 <a href="#" className="transition-colors hover:text-white">Documentation</a>
               </li>
             </ul>
@@ -130,17 +132,17 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderTop: '1px solid #333' }}>
-          <p className="text-xs font-sans" style={{ color: '#c9b99a' }}>
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3" style={{ borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+          <p className="text-xs font-sans text-white/60">
             © {new Date().getFullYear()} Etbaly. All rights reserved.
           </p>
           <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" aria-hidden="true" />
-            <span className="text-xs font-sans" style={{ color: '#c9b99a' }}>All systems operational</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse" aria-hidden="true" />
+            <span className="text-xs font-sans text-white/60">All systems operational</span>
           </div>
           <div className="flex gap-4">
             {['Privacy Policy', 'Terms of Service'].map((t) => (
-              <a key={t} href="#" className="text-xs font-sans transition-colors hover:text-white" style={{ color: '#c9b99a' }}>
+              <a key={t} href="#" className="text-xs font-sans text-white/60 hover:text-white transition-colors">
                 {t}
               </a>
             ))}

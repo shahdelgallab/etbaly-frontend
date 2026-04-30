@@ -103,7 +103,9 @@ export function useProductsViewModel() {
   );
 
   const filtered = useMemo(() => {
-    let result = allProducts.filter(p => p.isActive);
+    // Public API already returns only active products.
+    // Don't double-filter by isActive to avoid hiding valid results.
+    let result = [...allProducts];
 
     if (filters.search) {
       const q = filters.search.toLowerCase();
@@ -157,7 +159,7 @@ export function useProductsViewModel() {
 
   return {
     products: filtered,
-    totalCount: allProducts.filter(p => p.isActive).length,
+    totalCount: allProducts.length,
     loading,
     filters,
     maxPrice,

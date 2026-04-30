@@ -1,7 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useCartViewModel } from '../../viewmodels/useCartViewModel';
+import { AuthenticatedImage } from './AuthenticatedImage';
+import { pauseLenis, resumeLenis } from '../../lib/lenis';
 
 export default function CartSidebar() {
   const {
@@ -9,6 +12,21 @@ export default function CartSidebar() {
     removeItem, updateQty,
     subtotal, shipping, total, totalItems,
   } = useCartViewModel();
+
+  // Lock body scroll + pause Lenis while cart is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      pauseLenis();
+    } else {
+      document.body.style.overflow = '';
+      resumeLenis();
+    }
+    return () => {
+      document.body.style.overflow = '';
+      resumeLenis();
+    };
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -30,8 +48,11 @@ export default function CartSidebar() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 240 }}
-            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md flex flex-col shadow-xl"
-            style={{ background: 'var(--color-surface-2)', borderLeft: '1px solid var(--color-border)' }}
+            className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md flex flex-col shadow-2xl"
+            style={{
+              background: 'var(--color-surface)',
+              borderLeft: '1px solid var(--color-border)',
+            }}
             aria-label="Shopping cart"
             role="dialog"
           >
@@ -57,7 +78,10 @@ export default function CartSidebar() {
             </div>
 
             {/* Items */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+            <div
+              data-lenis-prevent
+              className="flex-1 overflow-y-auto overscroll-contain px-6 py-4 space-y-3"
+            >
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-4 text-text-muted py-16">
                   <ShoppingCart size={48} className="opacity-20" />
@@ -81,7 +105,15 @@ export default function CartSidebar() {
                       {/* Thumbnail */}
                       <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0" style={{ background: 'var(--color-surface-2)', border: '1px solid var(--color-border)' }}>
                         {item.product.imageUrl ? (
-                          <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                          item.product.imageUrl.includes('/files/proxy') ? (
+                            <AuthenticatedImage
+                              src={item.product.imageUrl}
+                              alt={item.product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <img src={item.product.imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                          )
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-text-muted text-xs font-bold font-sans">3D</div>
                         )}

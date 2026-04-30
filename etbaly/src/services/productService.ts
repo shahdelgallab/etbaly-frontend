@@ -4,8 +4,8 @@ import type { ApiSuccess, ApiProduct } from '../types/api';
 // ─── Response shapes ──────────────────────────────────────────────────────────
 
 interface PublicProductListData {
-  total:    number;   // public endpoint has both total and results
-  results:  number;
+  total?:   number;   // total in DB (may be absent on some API versions)
+  results:  number;   // count in this page
   products: ApiProduct[];
 }
 

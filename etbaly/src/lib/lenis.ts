@@ -4,11 +4,11 @@ let lenis: Lenis | null = null;
 
 export function initLenis() {
   lenis = new Lenis({
-    duration: 2.2,
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    duration: 0.8,
+    easing: (t) => 1 - Math.pow(1 - t, 3), // ease-out cubic — snappy but smooth
     smoothWheel: true,
-    wheelMultiplier: 0.6,
-    touchMultiplier: 1.5,
+    wheelMultiplier: 1.2,
+    touchMultiplier: 1.8,
     infinite: false,
   });
 
@@ -28,4 +28,16 @@ export function destroyLenis() {
 
 export function getLenis() {
   return lenis;
+}
+
+/**
+ * Temporarily pause Lenis so inner scroll containers (cart, chat feed)
+ * can receive wheel events natively.
+ */
+export function pauseLenis() {
+  lenis?.stop();
+}
+
+export function resumeLenis() {
+  lenis?.start();
 }

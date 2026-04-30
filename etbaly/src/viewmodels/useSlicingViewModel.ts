@@ -23,7 +23,8 @@ export function useSlicingViewModel() {
     designId: string,
     material: string = 'PLA',
     preset: SlicingPreset = 'normal',
-    scale: number = 100
+    scale: number = 100,
+    color?: string,
   ) => {
     setPhase('submitting');
     setError(null);
@@ -33,6 +34,7 @@ export function useSlicingViewModel() {
       const request: CreateSlicingJobRequest = {
         designId,
         material,
+        color: color ?? 'White',
         preset,
         scale,
       };
@@ -41,7 +43,6 @@ export function useSlicingViewModel() {
       
       setJob({
         jobId: response.jobId,
-        jobNumber: response.jobNumber,
         designId: response.designId,
         designName: response.designName,
         status: response.status,

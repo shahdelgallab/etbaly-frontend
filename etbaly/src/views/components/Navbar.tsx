@@ -14,6 +14,11 @@ const NAV_LINKS = [
   { to: '/upload',   label: 'UPLOAD',      end: false },
 ] as const;
 
+// Auth-only nav links (shown only when logged in)
+const AUTH_NAV_LINKS = [
+  { to: '/history', label: 'MY PRINTS', end: false },
+] as const;
+
 function getInitials(firstName?: string, lastName?: string): string {
   return `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase() || 'U';
 }
@@ -128,6 +133,34 @@ export default function Navbar() {
         {/* Desktop nav links — Inter, uppercase, small */}
         <div className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map(link => (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={link.end}
+              className={({ isActive }) =>
+                [
+                  'cursor-hover relative text-xs font-body font-medium tracking-widest transition-colors duration-200',
+                  isActive
+                    ? 'text-text'
+                    : 'text-text-muted hover:text-text',
+                ].join(' ')
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {link.label}
+                  {isActive && (
+                    <motion.div
+                      layoutId="navbar-indicator"
+                      className="absolute -bottom-1 left-0 right-0 h-[2px] bg-primary"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </>
+              )}
+            </NavLink>
+          ))}
+          {user && AUTH_NAV_LINKS.map(link => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -276,6 +309,24 @@ export default function Navbar() {
               {/* Nav links */}
               <div className="space-y-2">
                 {NAV_LINKS.map(link => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.end}
+                    onClick={closeMobile}
+                    className={({ isActive }) =>
+                      [
+                        'cursor-hover block px-4 py-3 text-2xl font-display transition-colors',
+                        isActive
+                          ? 'text-primary'
+                          : 'text-text-muted hover:text-text',
+                      ].join(' ')
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+                {user && AUTH_NAV_LINKS.map(link => (
                   <NavLink
                     key={link.to}
                     to={link.to}

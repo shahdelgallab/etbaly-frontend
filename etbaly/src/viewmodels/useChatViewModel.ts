@@ -2,11 +2,12 @@ import { useState, useCallback, useRef } from 'react';
 import type { BufferGeometry } from 'three';
 import { aiService } from '../services/aiService';
 import { slicingService } from '../services/slicingService';
-import { useCartStore } from '../store/cartStore';
+import { cartService } from '../services/cartService';
+import { useAppDispatch } from '../store/hooks';
+import { fetchCartThunk, openCart as reduxOpenCart, patchItemDisplay } from '../store/slices/cartSlice';
 import { fetchAndParseSTL } from '../utils/stlLoader';
 import { getDirectImageUrl } from '../utils/imageUtils';
 import type { ChatMessage } from '../models/ChatMessage';
-import type { Product, MaterialType } from '../models/Product';
 import type { SlicingPreset } from '../models/SlicingJob';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ export interface SlicingOptions {
   material: string;
   preset: SlicingPreset;
   scale: number;
+  color: string; // Color name: 'Red' | 'Green' | 'Blue'
 }
 
 export interface QuotationData {
@@ -87,6 +89,7 @@ export function useChatViewModel() {
     material: 'PLA',
     preset: 'normal',
     scale: 100,
+    color: 'Red',
   });
   const [quotationData, setQuotationData] = useState<QuotationData | null>(null);
   const [slicingJobId, setSlicingJobId] = useState<string | null>(null);
@@ -99,7 +102,9 @@ export function useChatViewModel() {
   const attemptsRef  = useRef(0);
   const completedRef = useRef(false);
 
-  const { addItem, openCart } = useCartStore();
+  const dispatch = useAppDispatch();
+
+  const { openCart } = { openCart: () => dispatch(reduxOpenCart()) };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -427,6 +432,14 @@ export function useChatViewModel() {
     setSlicingOptions(prev => ({ ...prev, ...options }));
   }, []);
 
+  // ── Go back to options from quote ─────────────────────────────────────────
+
+  const backToOptions = useCallback(() => {
+    setChatStep('quotation');
+    setQuotationData(null);
+    addMessage({ role: 'assistant', content: "No problem! Adjust your preferences and get a new quote:" });
+  }, [addMessage]);
+
   // ── Execute slicing → get quotation ───────────────────────────────────────
 
   const executeSlicing = useCallback(async () => {
@@ -443,6 +456,7 @@ export function useChatViewModel() {
       const response = await slicingService.executeSlicing({
         designId: pendingModel.designId,
         material: slicingOptions.material,
+        color: slicingOptions.color,
         preset: slicingOptions.preset,
         scale: slicingOptions.scale,
       });
@@ -493,30 +507,68 @@ export function useChatViewModel() {
 
   // ── Confirm 3D model → add to cart ───────────────────────────────────────
 
-  const confirmModel = useCallback(() => {
+  const confirmModel = useCallback(async () => {
     if (!pendingModel || !quotationData) return;
-    const product: Product = {
-      id:          crypto.randomUUID(),
-      name:        pendingModel.suggestedName,
-      description: `AI-generated custom 3D model - ${slicingOptions.material} at ${slicingOptions.scale}% scale`,
-      imageUrl:    '',
-      modelUrl:    pendingModel.modelUrl,
-      price:       quotationData.calculatedPrice,
-      material:    slicingOptions.material as MaterialType,
-      collection:  'Art & Sculptures',
-      tags:        ['custom', 'ai-generated', slicingOptions.material.toLowerCase()],
-      rating:      5,
-      reviewCount: 0,
-      stock:       1,
-      isFeatured:  false,
-      isActive:    true,
-      createdAt:   new Date(),
-    };
-    addItem(product, 1, pendingModel.modelUrl);
-    openCart();
-    setChatStep('done');
-    addMessage({ role: 'assistant', content: "Added to your cart! Head to checkout whenever you're ready." });
-  }, [pendingModel, quotationData, slicingOptions, addItem, openCart, addMessage]);
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Call backend cart API to add the design
+      await cartService.addItem({
+        itemType: 'Design',
+        itemRefId: pendingModel.designId!,
+        quantity: 1,
+        printingProperties: {
+          material: slicingOptions.material as 'PLA' | 'ABS' | 'PETG' | 'TPU' | 'Resin',
+          color: slicingOptions.color,
+          scale: slicingOptions.scale,
+          preset: slicingOptions.preset,
+          customFields: [
+            { key: 'printTime', value: String(quotationData.printTime) },
+            { key: 'weight', value: String(quotationData.weight) },
+            { key: 'width', value: String(quotationData.dimensions.width) },
+            { key: 'height', value: String(quotationData.dimensions.height) },
+            { key: 'depth', value: String(quotationData.dimensions.depth) },
+            { key: 'gcodeUrl', value: quotationData.gcodeUrl },
+          ],
+        },
+      });
+      
+      // Sync Redux cart from backend then open the sidebar
+      await dispatch(fetchCartThunk());
+
+      // Patch the item's display name and image with what the user saw in the chat.
+      // pendingImageUrl is already proxied through the backend (set by generateImageFromText).
+      // For image-to-3d flows, use the user's original upload preview as fallback.
+      const displayName  = pendingModel.suggestedName || 'Custom 3D Model';
+      const displayImage = pendingImageUrl ?? '';
+      if (pendingModel.designId) {
+        dispatch(patchItemDisplay({
+          itemRefId:    pendingModel.designId,
+          name:         displayName,
+          thumbnailUrl: displayImage,
+        }));
+      }
+
+      openCart();
+      setChatStep('done');
+      addMessage({ 
+        role: 'assistant', 
+        content: "Added to your cart! Head to checkout whenever you're ready." 
+      });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } }; message?: string })
+        ?.response?.data?.message ?? (err as Error)?.message ?? 'Failed to add item to cart.';
+      setError(msg);
+      addMessage({ 
+        role: 'assistant', 
+        content: `Sorry, there was an error adding to cart: ${msg}` 
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [pendingModel, quotationData, slicingOptions, openCart, addMessage, dispatch, pendingImageUrl]);
 
   // ── Reject 3D model → back to idle ───────────────────────────────────────
 
@@ -538,7 +590,7 @@ export function useChatViewModel() {
     setPendingImageUrl(null);
     setPendingImageJobId(null);
     setPendingDesignName('');
-    setSlicingOptions({ material: 'PLA', preset: 'normal', scale: 100 });
+    setSlicingOptions({ material: 'PLA', preset: 'normal', scale: 100, color: 'Red' });
     setQuotationData(null);
     setSlicingJobId(null);
     setError(null);
@@ -572,6 +624,7 @@ export function useChatViewModel() {
     requestQuotation,
     updateSlicingOptions,
     executeSlicing,
+    backToOptions,
     confirmModel,
     rejectModel,
     reset,
