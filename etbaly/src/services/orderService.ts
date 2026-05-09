@@ -38,6 +38,11 @@ export const orderService = {
     api.get<ApiSuccess<AdminOrdersData>>('/admin/orders', { params })
       .then(r => r.data),
 
+  // GET /api/v1/admin/orders/:id  →  { data: { order: {} } }
+  adminGetById: (id: string) =>
+    api.get<ApiSuccess<OrderData>>(`/admin/orders/${id}`)
+      .then(r => r.data.data.order),
+
   // PATCH /api/v1/admin/orders/:id/status
   updateStatus: (id: string, status: ApiOrderStatus) =>
     api.patch<ApiSuccess<OrderData>>(`/admin/orders/${id}/status`, { status })

@@ -162,15 +162,38 @@ export type ApiPaymentMethod  = 'Card' | 'Wallet' | 'COD';
 export type ApiPaymentStatus  = 'Pending' | 'Paid' | 'Failed';
 export type ApiItemStatus     = 'Queued' | 'Printing' | 'Ready';
 
+export type ApiPrintingJobStatus =
+  | 'Pending Review' | 'Approved' | 'Rejected'
+  | 'Queued' | 'Processing' | 'Completed' | 'Failed';
+
+export interface ApiOrderItemPrintingProperties {
+  material?: string;
+  color?:    string;
+  scale?:    number;
+  preset?:   string;
+}
+
+/** itemRefId is populated in GET /orders and GET /orders/:id responses */
+export interface ApiOrderItemRef {
+  _id:          string;
+  name:         string;
+  images?:      string[];
+  thumbnailUrl?: string;
+  description?: string;
+}
+
 export interface ApiOrderItem {
-  _id:           string;
-  itemType:      'Product' | 'Design';
-  itemRefId:     string;
-  quantity:      number;
-  price:         number;
-  status:        ApiItemStatus;
-  customization?: ApiCustomization;
-  materialId?:   string;
+  _id:                 string;
+  itemType:            'Product' | 'Design';
+  /** Populated object in user-facing endpoints; plain string in admin list */
+  itemRefId:           ApiOrderItemRef | string;
+  quantity:            number;
+  price:               number;
+  status:              ApiItemStatus;
+  printingProperties?: ApiOrderItemPrintingProperties;
+  printingJobs?:       ApiPrintingJobStatus[];
+  customization?:      ApiCustomization;
+  materialId?:         string;
 }
 
 export interface ApiOrder {
