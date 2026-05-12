@@ -129,9 +129,11 @@ export function useCartViewModel() {
           material: product.material as 'PLA' | 'ABS' | 'PETG' | 'TPU' | 'Resin',
         },
       };
+      // cartSlice sets isOpen=true on fulfilled — no need to call openCart() separately
       dispatch(addCartItemThunk(payload));
     } else {
       zustandStore.addItem(product, qty, _customModelUrl);
+      zustandStore.openCart();
     }
   }, [isAuthenticated, dispatch, zustandStore]);
 

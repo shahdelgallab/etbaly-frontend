@@ -92,7 +92,7 @@ export function useProductDetailViewModel() {
         quantity:  1,
         printingProperties: {
           material: opts.material as 'PLA' | 'ABS' | 'PETG' | 'TPU' | 'Resin',
-          color:    opts.color || undefined,
+          color:    opts.color || 'White',
           scale:    opts.scale,
           preset:   opts.preset,
         },
@@ -103,8 +103,14 @@ export function useProductDetailViewModel() {
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message ?? 'Failed to add to cart.';
-      setError(msg);
       setPhase('idle');
+      // If the error is about missing slicing job, open the re-quote panel automatically
+      if (msg.toLowerCase().includes('slic') || msg.toLowerCase().includes('must be sliced')) {
+        setShowReQuote(true);
+        setError('This product needs to be sliced first. Configure your options below and click "Get Quote".');
+      } else {
+        setError(msg);
+      }
     }
   }, [product, opts, dispatch]);
 

@@ -11,6 +11,8 @@ import { printingService, type PrintingJobStatus, type PrintingJobPopulated } fr
 import { orderService } from '../../services/orderService';
 import PageWrapper from '../components/PageWrapper';
 import ProductFormModal from '../components/ProductFormModal';
+import { AuthenticatedImage } from '../components/AuthenticatedImage';
+import { getDirectImageUrl } from '../../utils/imageUtils';
 import type { ApiOrderStatus, ApiUser, ApiProduct, ApiOrderItem, ApiOrderItemRef, ApiPrintingJobStatus } from '../../types/api';
 import type { AdminMaterial, CreateMaterialPayload, MaterialType } from '../../models/Material';
 
@@ -823,7 +825,9 @@ function OrderItemsModal({ orderId, orderNumber, onClose }: {
   const getItemImage = (item: ApiOrderItem): string | undefined => {
     if (typeof item.itemRefId === 'object' && item.itemRefId !== null) {
       const ref = item.itemRefId as ApiOrderItemRef;
-      return ref.images?.[0] ?? ref.thumbnailUrl;
+      const raw = ref.images?.[0] ?? ref.thumbnailUrl;
+      if (!raw) return undefined;
+      return getDirectImageUrl(raw, import.meta.env.VITE_API_URL ?? '');
     }
     return undefined;
   };
@@ -871,7 +875,7 @@ function OrderItemsModal({ orderId, orderNumber, onClose }: {
                   {/* Thumbnail */}
                   <div className="w-12 h-12 rounded-lg overflow-hidden border border-border flex-shrink-0 bg-primary/5 flex items-center justify-center">
                     {getItemImage(item)
-                      ? <img src={getItemImage(item)} alt={getItemName(item)} className="w-full h-full object-cover" />
+                      ? <AuthenticatedImage src={getItemImage(item)!} alt={getItemName(item)} className="w-full h-full object-cover" />
                       : <Package size={18} className="text-primary/40" />}
                   </div>
 
@@ -1096,7 +1100,7 @@ export default function AdminPage() {
   const dispatch = useAppDispatch();
   const { hydrating } = useAppSelector(s => s.auth);
   const { items: orders, loading: ordersLoading } = useAppSelector(s => s.orders);
-  const { items: products, loading: productsLoading } = useAppSelector(s => s.products);
+  const { adminItems: products, loading: productsLoading } = useAppSelector(s => s.products);
 
   const [tab, setTab] = useState<'orders' | 'products' | 'users' | 'materials' | 'printing'>('orders');
   const [users,        setUsers]        = useState<ApiUser[]>([]);
@@ -1193,7 +1197,7 @@ export default function AdminPage() {
                 <table className="w-full text-sm font-exo">
                   <thead className="border-b border-border">
                     <tr className="text-left text-text-muted text-xs">
-                      {['Image', 'Name', 'Price', 'Stock', 'Active', 'Actions'].map(h => (
+                      {['Image', 'Name', 'Material', 'Price', 'Active', 'Actions'].map(h => (
                         <th key={h} className="px-4 py-3 font-medium">{h}</th>
                       ))}
                     </tr>
@@ -1203,12 +1207,26 @@ export default function AdminPage() {
                       <tr key={p._id} className="border-b border-border/50 hover:bg-primary/5 transition-colors">
                         <td className="px-4 py-3">
                           {p.images?.[0]
-                            ? <img src={p.images[0]} alt={p.name} className="w-10 h-10 rounded-lg object-cover border border-border" />
+                            ? <AuthenticatedImage
+                                src={getDirectImageUrl(p.images[0], import.meta.env.VITE_API_URL ?? '')}
+                                alt={p.name}
+                                className="w-10 h-10 rounded-lg object-cover border border-border"
+                              />
                             : <div className="w-10 h-10 rounded-lg bg-primary/10 border border-border flex items-center justify-center text-primary/40 text-[10px] font-orbitron">3D</div>}
                         </td>
                         <td className="px-4 py-3 text-text font-medium">{p.name}</td>
-                        <td className="px-4 py-3 text-primary">${p.currentBasePrice.toFixed(2)}</td>
-                        <td className="px-4 py-3 text-text-muted">{p.stockLevel}</td>
+                        <td className="px-4 py-3">
+                          {p.printingProperties?.material
+                            ? <span className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-orbitron">{p.printingProperties.material}</span>
+                            : <span className="text-text-muted text-xs">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-primary font-orbitron text-xs">
+                          {p.slicingResult?.calculatedPrice != null
+                            ? `$${Number(p.slicingResult.calculatedPrice).toFixed(2)}`
+                            : p.currentBasePrice != null
+                            ? `$${Number(p.currentBasePrice).toFixed(2)}`
+                            : '—'}
+                        </td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded-full text-xs ${p.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                             {p.isActive ? 'Active' : 'Inactive'}

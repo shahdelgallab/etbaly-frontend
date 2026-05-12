@@ -74,17 +74,38 @@ export interface RegisterData {
 
 // ─── Backend Product shape ────────────────────────────────────────────────────
 
+export interface ApiProductPrintingProperties {
+  material?: string;
+  color?:    string;
+  scale?:    number;
+  preset?:   string;
+}
+
+export interface ApiProductSlicingResult {
+  gcodeUrl?:        string;
+  dimensions?:      { width: number; height: number; depth: number };
+  weight?:          number;
+  printTime?:       number;
+  calculatedPrice?: number;
+  slicedAt?:        string;
+}
+
 export interface ApiProduct {
-  _id:              string;
-  name:             string;
-  description?:     string;
-  images:           string[];
-  currentBasePrice: number;
-  isActive:         boolean;
-  stockLevel:       number;
-  linkedDesignId?:  string;
-  createdAt:        string;
-  updatedAt?:       string;
+  _id:                  string;
+  name:                 string;
+  description?:         string;
+  images:               string[];
+  isActive:             boolean;
+  linkedDesignId?:      string;
+  slicingJobId?:        string;
+  printingProperties?:  ApiProductPrintingProperties;
+  slicingResult?:       ApiProductSlicingResult;
+  isCustomizable?:      boolean;
+  createdAt:            string;
+  updatedAt?:           string;
+  // Legacy fields — may be present on older products
+  currentBasePrice?:    number;
+  stockLevel?:          number;
 }
 
 // ─── Backend Design shape ─────────────────────────────────────────────────────

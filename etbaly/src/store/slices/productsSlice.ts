@@ -4,19 +4,23 @@ import type { ApiProduct } from '../../types/api';
 import type { ProductQuery, CreateProductPayload, UpdateProductPayload } from '../../services/productService';
 
 interface ProductsState {
-  items:    ApiProduct[];
-  total:    number;
-  loading:  boolean;
-  error:    string | null;
-  selected: ApiProduct | null;
+  items:       ApiProduct[];   // public-facing products (ProductsPage)
+  adminItems:  ApiProduct[];   // admin-only products (AdminPage)
+  total:       number;
+  adminTotal:  number;
+  loading:     boolean;
+  error:       string | null;
+  selected:    ApiProduct | null;
 }
 
 const initialState: ProductsState = {
-  items:    [],
-  total:    0,
-  loading:  false,
-  error:    null,
-  selected: null,
+  items:       [],
+  adminItems:  [],
+  total:       0,
+  adminTotal:  0,
+  loading:     false,
+  error:       null,
+  selected:    null,
 };
 
 function extractMsg(err: unknown): string {
@@ -105,31 +109,31 @@ const productsSlice = createSlice({
       .addCase(fetchProductByIdThunk.fulfilled, (s, a) => { s.loading = false; s.selected = a.payload; })
       .addCase(fetchProductByIdThunk.rejected,  (s, a) => { s.loading = false; s.error = a.payload as string; })
 
-      // Admin fetch all
+      // Admin fetch all — writes to adminItems, not items
       .addCase(adminFetchProductsThunk.pending,   s => { s.loading = true;  s.error = null; })
       .addCase(adminFetchProductsThunk.fulfilled, (s, a) => {
-        s.loading = false;
-        s.items   = a.payload.products;
-        s.total   = a.payload.total;
+        s.loading    = false;
+        s.adminItems = a.payload.products;
+        s.adminTotal = a.payload.total;
       })
       .addCase(adminFetchProductsThunk.rejected,  (s, a) => { s.loading = false; s.error = a.payload as string; })
 
       // Admin create
       .addCase(adminCreateProductThunk.fulfilled, (s, a) => {
-        s.items = [a.payload, ...s.items];
-        s.total += 1;
+        s.adminItems = [a.payload, ...s.adminItems];
+        s.adminTotal += 1;
       })
 
       // Admin update
       .addCase(adminUpdateProductThunk.fulfilled, (s, a) => {
-        const idx = s.items.findIndex(p => p._id === a.payload._id);
-        if (idx !== -1) s.items[idx] = a.payload;
+        const idx = s.adminItems.findIndex(p => p._id === a.payload._id);
+        if (idx !== -1) s.adminItems[idx] = a.payload;
       })
 
       // Admin delete
       .addCase(adminDeleteProductThunk.fulfilled, (s, a) => {
-        s.items = s.items.filter(p => p._id !== a.payload);
-        s.total = Math.max(0, s.total - 1);
+        s.adminItems = s.adminItems.filter(p => p._id !== a.payload);
+        s.adminTotal = Math.max(0, s.adminTotal - 1);
       });
   },
 });

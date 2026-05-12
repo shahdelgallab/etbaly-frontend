@@ -12,7 +12,7 @@ export default function PageWrapper({ children, className = '' }: Props) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className={`pt-16 ${className}`}
+      className={`pt-16 flex-1 flex flex-col ${className}`}
     >
       {children}
     </motion.div>

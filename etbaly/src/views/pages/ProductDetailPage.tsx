@@ -128,7 +128,7 @@ export default function ProductDetailPage() {
               <div className="flex items-center gap-2 mt-3">
                 <span className="text-xs font-exo text-text-muted">Base price:</span>
                 <span className="font-orbitron text-xl font-bold text-primary">
-                  ${p.currentBasePrice.toFixed(2)}
+                  ${Number(p.slicingResult?.calculatedPrice ?? p.currentBasePrice ?? 0).toFixed(2)}
                 </span>
               </div>
             </div>

@@ -27,11 +27,18 @@ export const tokenStorage = {
   },
 };
 
-// ─── Request interceptor — attach access token ────────────────────────────────
+// ─── Request interceptor — attach access token + fix multipart uploads ────────
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = tokenStorage.getAccess();
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // When sending FormData, delete the default application/json Content-Type so
+  // axios can set multipart/form-data with the correct boundary automatically.
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+
   return config;
 });
 

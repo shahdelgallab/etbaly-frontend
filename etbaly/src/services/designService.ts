@@ -61,12 +61,10 @@ export const designService = {
     const form = new FormData();
     form.append('file', file);
     form.append('name', name);
+    // Do NOT set Content-Type manually — browser must set it with the correct multipart boundary
     return api.post<ApiSuccess<UploadFileData>>(
       '/designs/upload', form,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 0,   // no timeout — file uploads can be slow
-      }
+      { timeout: 0 }
     ).then(r => r.data.data);
   },
 
@@ -110,26 +108,26 @@ export const designService = {
   // ── Admin ──────────────────────────────────────────────────────────────────
 
   /**
-   * POST /api/v1/admin/designs/upload  (multipart — admin step 1)
-   * Returns fileUrl string (legacy shape used by admin upload flow)
+   * POST /api/v1/designs/upload  (multipart — admin step 1)
+   * Uses the standard designs upload endpoint (works for all authenticated users).
+   * Returns fileUrl string.
    */
   adminUploadFile: (file: File): Promise<string> => {
     const form = new FormData();
     form.append('file', file);
+    form.append('name', file.name);
+    // Do NOT set Content-Type manually — browser must set it with the correct multipart boundary
     return api.post<ApiSuccess<UploadFileData>>(
-      '/admin/designs/upload', form,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 0,
-      }
+      '/designs/upload', form,
+      { timeout: 0 }
     ).then(r => r.data.data.fileUrl);
   },
 
   /**
-   * POST /api/v1/admin/designs  (admin step 2: create record)
+   * POST /api/v1/designs  (admin step 2: create record — same endpoint for all roles)
    */
   adminCreate: (payload: CreateDesignPayload): Promise<ApiDesign> =>
-    api.post<ApiSuccess<DesignData>>('/admin/designs', payload)
+    api.post<ApiSuccess<DesignData>>('/designs', payload)
       .then(r => r.data.data.design),
 
   /**

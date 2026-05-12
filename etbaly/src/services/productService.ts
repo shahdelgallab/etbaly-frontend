@@ -15,7 +15,7 @@ interface AdminProductListData {
 }
 
 interface ProductData     { product: ApiProduct }
-interface ImageUploadData { imageUrl: string }
+interface ImageUploadData { fileId: string; fileUrl: string }
 
 // ─── Request payloads ─────────────────────────────────────────────────────────
 
@@ -32,23 +32,19 @@ export interface ProductQuery {
 }
 
 export interface CreateProductPayload {
-  name:             string;
-  currentBasePrice: number;
-  linkedDesignId:   string;
-  description?:     string;
-  images?:          string[];
-  isActive?:        boolean;
-  stockLevel?:      number;
+  name:            string;
+  linkedDesignId:  string;
+  slicingJobId:    string;   // completed SlicingJob — price & printingProperties auto-derived
+  description?:    string;
+  images?:         string[];
+  isActive?:       boolean;
 }
 
 export interface UpdateProductPayload {
-  name?:             string;
-  currentBasePrice?: number;
-  linkedDesignId?:   string;
-  description?:      string;
-  images?:           string[];
-  isActive?:         boolean;
-  stockLevel?:       number;
+  name?:           string;
+  description?:    string;
+  images?:         string[];
+  isActive?:       boolean;
 }
 
 export const productService = {
@@ -76,14 +72,14 @@ export const productService = {
     api.get<ApiSuccess<ProductData>>(`/admin/products/${id}`)
       .then(r => r.data.data.product),
 
-  // POST /api/v1/admin/products/upload-image  (multipart — get imageUrl first)
+  // POST /api/v1/admin/products/upload-image  (multipart — returns { fileId, fileUrl })
   uploadImage: (file: File) => {
     const form = new FormData();
     form.append('image', file);
+    // Do NOT set Content-Type manually — browser must set it with the correct multipart boundary
     return api.post<ApiSuccess<ImageUploadData>>(
-      '/admin/products/upload-image', form,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    ).then(r => r.data.data.imageUrl);
+      '/admin/products/upload-image', form
+    ).then(r => r.data.data.fileUrl);
   },
 
   // POST /api/v1/admin/products

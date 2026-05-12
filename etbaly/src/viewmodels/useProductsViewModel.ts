@@ -30,19 +30,24 @@ const DEFAULT_FILTERS: ProductFilters = {
 // ─── Map API product → local Product model ────────────────────────────────────
 
 function mapApiProduct(p: ApiProduct): Product {
+  // Price comes from slicingResult.calculatedPrice (new schema) or currentBasePrice (legacy)
+  const price = Number(p.slicingResult?.calculatedPrice ?? p.currentBasePrice ?? 0) || 0;
+  // Material comes from printingProperties (new schema)
+  const material = (p.printingProperties?.material as MaterialType | undefined) ?? 'PLA';
+
   return {
     id:          p._id,
     name:        p.name,
     description: p.description ?? '',
     imageUrl:    p.images[0] ?? '',
     gallery:     p.images.slice(1),
-    price:       p.currentBasePrice,
-    material:    'PLA',          // API products don't carry material — default
-    collection:  'Home Decor',   // API products don't carry collection — default
+    price,
+    material,
+    collection:  'Home Decor',
     tags:        [],
     rating:      0,
     reviewCount: 0,
-    stock:       p.stockLevel,
+    stock:       Number(p.stockLevel ?? 100),   // default 100 if not present
     isFeatured:  false,
     isActive:    p.isActive,
     createdAt:   new Date(p.createdAt),
@@ -79,9 +84,9 @@ export function useProductsViewModel() {
     search: searchParams.get('q') ?? '',
   }));
 
-  // Fetch from Redux (real API) on mount
+  // Fetch from Redux (real API) on mount — no limit so all products are returned
   useEffect(() => {
-    dispatch(fetchProductsThunk({ limit: 100 }));
+    dispatch(fetchProductsThunk({}));
   }, [dispatch]);
 
   // While loading → empty (page shows skeleton)
@@ -117,7 +122,7 @@ export function useProductsViewModel() {
     }
     if (filters.collections.length > 0) result = result.filter(p => filters.collections.includes(p.collection));
     if (filters.materials.length > 0)   result = result.filter(p => filters.materials.includes(p.material));
-    result = result.filter(p => p.price >= filters.priceMin && p.price <= filters.priceMax);
+    result = result.filter(p => p.price >= filters.priceMin && (filters.priceMax >= 9999 || p.price <= filters.priceMax));
     if (filters.inStockOnly) result = result.filter(p => p.stock > 0);
 
     switch (filters.sort) {

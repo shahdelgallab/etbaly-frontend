@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
-import { X, CheckCircle2, AlertCircle, ChevronRight, Upload, Image } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, ChevronRight, Upload, Image, Cpu, Loader2 } from 'lucide-react';
+import api from '../../services/api';
 import { designService } from '../../services/designService';
 import { productService } from '../../services/productService';
+import { slicingService } from '../../services/slicingService';
 import type { ApiProduct } from '../../types/api';
 import type { ApiMaterialType } from '../../types/api';
-
-// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   editProduct: ApiProduct | null;
@@ -13,20 +13,19 @@ interface Props {
   onSuccess: () => void;
 }
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
-
 const inputCls = 'w-full px-4 py-2.5 glass border border-border rounded-xl text-sm text-text placeholder:text-text-muted font-exo focus:outline-none focus:border-primary focus:shadow-glow-sm transition-all bg-transparent';
 const labelCls = 'block text-xs font-medium text-text-muted font-exo mb-1.5';
 const MATERIALS: ApiMaterialType[] = ['PLA', 'ABS', 'Resin', 'TPU', 'PETG'];
+const PRESETS = ['normal', 'heavy', 'draft'] as const;
+const COLORS   = ['White', 'Black', 'Red', 'Blue', 'Green', 'Yellow', 'Orange', 'Purple', 'Pink', 'Gray', 'Silver', 'Transparent', 'Brown', 'Cyan'];
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
-
-const STEP_LABELS = ['Upload File', 'Create Design', 'Upload Image', 'Product Details'];
+// Step labels differ between create (5 steps) and edit (1 step)
+const CREATE_STEPS = ['Upload File', 'Create Design', 'Slice', 'Upload Image', 'Details'];
 
 function StepBar({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-1">
-      {STEP_LABELS.slice(0, total).map((label, i) => (
+      {CREATE_STEPS.slice(0, total).map((label, i) => (
         <div key={label} className="flex items-center gap-1 shrink-0">
           <div className={[
             'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-exo transition-all whitespace-nowrap',
@@ -34,9 +33,7 @@ function StepBar({ current, total }: { current: number; total: number }) {
             : i === current ? 'bg-primary/15 text-primary border border-primary/30 font-semibold'
             : 'glass border border-border text-text-muted',
           ].join(' ')}>
-            {i < current
-              ? <CheckCircle2 size={11} />
-              : <span className="font-orbitron text-[10px]">{i + 1}</span>}
+            {i < current ? <CheckCircle2 size={11} /> : <span className="font-orbitron text-[10px]">{i + 1}</span>}
             {label}
           </div>
           {i < total - 1 && <ChevronRight size={11} className="text-border shrink-0" />}
@@ -46,8 +43,6 @@ function StepBar({ current, total }: { current: number; total: number }) {
   );
 }
 
-// ─── Error box ────────────────────────────────────────────────────────────────
-
 function ErrBox({ msg }: { msg: string }) {
   if (!msg) return null;
   return (
@@ -56,8 +51,6 @@ function ErrBox({ msg }: { msg: string }) {
     </div>
   );
 }
-
-// ─── Spinner button ───────────────────────────────────────────────────────────
 
 function Btn({ loading, disabled, onClick, children, variant = 'primary' }: {
   loading?: boolean; disabled?: boolean; onClick?: () => void;
@@ -69,9 +62,7 @@ function Btn({ loading, disabled, onClick, children, variant = 'primary' }: {
     : `${base} glass border border-border text-text-muted hover:text-primary hover:border-primary`;
   return (
     <button className={cls} disabled={disabled || loading} onClick={onClick}>
-      {loading
-        ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        : children}
+      {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : children}
     </button>
   );
 }
@@ -80,10 +71,11 @@ function Btn({ loading, disabled, onClick, children, variant = 'primary' }: {
 
 function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
-  const [file,    setFile]    = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [fileUrl, setFileUrl] = useState('');
-  const [error,   setError]   = useState('');
+  const [file,     setFile]     = useState<File | null>(null);
+  const [loading,  setLoading]  = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [fileUrl,  setFileUrl]  = useState('');
+  const [error,    setError]    = useState('');
 
   const pick = (f: File) => {
     const ext = f.name.split('.').pop()?.toLowerCase();
@@ -94,10 +86,17 @@ function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
 
   const upload = async () => {
     if (!file) return;
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setProgress(0);
     try {
-      const url = await designService.adminUploadFile(file);
-      setFileUrl(url);
+      const form = new FormData();
+      form.append('file', file);
+      form.append('name', file.name);
+      // Do NOT set Content-Type manually — let the browser set it with the correct multipart boundary
+      const res = await api.post('/designs/upload', form, {
+        timeout: 0,
+        onUploadProgress: (e) => { if (e.total) setProgress(Math.round((e.loaded / e.total) * 100)); },
+      });
+      setFileUrl(res.data.data.fileUrl);
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Upload failed.');
     } finally { setLoading(false); }
@@ -106,12 +105,13 @@ function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
   return (
     <div className="space-y-4">
       <div
-        onClick={() => !fileUrl && ref.current?.click()}
+        onClick={() => !fileUrl && !loading && ref.current?.click()}
         onDragOver={e => e.preventDefault()}
-        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && !fileUrl) pick(f); }}
+        onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && !fileUrl && !loading) pick(f); }}
         className={[
           'border-2 border-dashed rounded-xl p-8 text-center transition-all',
           fileUrl ? 'border-green-500/40 bg-green-500/5 cursor-default'
+          : loading ? 'border-primary/40 bg-primary/5 cursor-default'
           : 'border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer',
         ].join(' ')}
       >
@@ -119,7 +119,7 @@ function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
           <div className="flex flex-col items-center gap-2">
             <CheckCircle2 size={32} className="text-green-400" />
             <p className="text-sm font-exo text-green-400 font-medium">{file?.name}</p>
-            <p className="text-xs font-exo text-text-muted break-all">{fileUrl}</p>
+            <p className="text-xs font-exo text-text-muted break-all">{fileUrl.slice(0, 60)}…</p>
           </div>
         ) : file ? (
           <div className="flex flex-col items-center gap-2">
@@ -140,16 +140,21 @@ function Step1({ onDone }: { onDone: (fileUrl: string) => void }) {
 
       <ErrBox msg={error} />
 
-      {!fileUrl && (
-        <Btn loading={loading} disabled={!file} onClick={upload}>
-          Upload File
-        </Btn>
+      {loading && (
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs font-exo text-text-muted">
+            <span>Uploading to Google Drive…</span>
+            <span className="text-primary font-medium">{progress}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="text-[10px] font-exo text-text-muted">Large files may take a moment — please wait.</p>
+        </div>
       )}
-      {fileUrl && (
-        <Btn onClick={() => onDone(fileUrl)}>
-          Next: Create Design →
-        </Btn>
-      )}
+
+      {!fileUrl && <Btn loading={loading} disabled={!file} onClick={upload}>Upload File</Btn>}
+      {fileUrl  && <Btn onClick={() => onDone(fileUrl)}>Next: Create Design →</Btn>}
     </div>
   );
 }
@@ -201,24 +206,18 @@ function Step2({ fileUrl, onBack, onDone }: { fileUrl: string; onBack: () => voi
             <label className={labelCls}>Design Name *</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Custom Bracket" className={inputCls} />
           </div>
-
           <div>
             <label className={labelCls}>Supported Materials * (select at least one)</label>
             <div className="flex flex-wrap gap-2">
               {MATERIALS.map(m => (
                 <button key={m} type="button" onClick={() => toggleMat(m)}
-                  className={[
-                    'px-3 py-1.5 rounded-lg text-xs font-exo border transition-all',
-                    materials.includes(m)
-                      ? 'bg-primary/20 border-primary/50 text-primary'
-                      : 'glass border-border text-text-muted hover:border-primary/40',
-                  ].join(' ')}>
+                  className={['px-3 py-1.5 rounded-lg text-xs font-exo border transition-all',
+                    materials.includes(m) ? 'bg-primary/20 border-primary/50 text-primary' : 'glass border-border text-text-muted hover:border-primary/40'].join(' ')}>
                   {m}
                 </button>
               ))}
             </div>
           </div>
-
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <div onClick={() => setPrintable(v => !v)}
               className={`w-10 h-5 rounded-full transition-colors relative ${printable ? 'bg-primary' : 'bg-border'}`}>
@@ -230,20 +229,116 @@ function Step2({ fileUrl, onBack, onDone }: { fileUrl: string; onBack: () => voi
       )}
 
       <ErrBox msg={error} />
-
       <div className="flex gap-2">
         <Btn variant="ghost" onClick={onBack} disabled={loading}>← Back</Btn>
         {designId
-          ? <Btn onClick={() => onDone(designId)}>Next: Upload Image →</Btn>
+          ? <Btn onClick={() => onDone(designId)}>Next: Slice →</Btn>
           : <Btn loading={loading} disabled={!name.trim() || materials.length === 0} onClick={create}>Create Design</Btn>}
       </div>
     </div>
   );
 }
 
-// ─── Step 3: Upload product image ─────────────────────────────────────────────
+// ─── Step 3: Run Slicing ──────────────────────────────────────────────────────
 
-function Step3({ onBack, onDone }: { onBack: () => void; onDone: (imageUrl: string) => void }) {
+function Step3({ designId, onBack, onDone }: { designId: string; onBack: () => void; onDone: (slicingJobId: string) => void }) {
+  const [material,     setMaterial]     = useState<ApiMaterialType>('PLA');
+  const [color,        setColor]        = useState('White');
+  const [preset,       setPreset]       = useState<'normal' | 'heavy' | 'draft'>('normal');
+  const [scale,        setScale]        = useState(100);
+  const [loading,      setLoading]      = useState(false);
+  const [statusMsg,    setStatusMsg]    = useState('');
+  const [slicingJobId, setSlicingJobId] = useState('');
+  const [error,        setError]        = useState('');
+
+  const runSlicing = async () => {
+    setLoading(true); setError(''); setStatusMsg('Dispatching slicing job…');
+    try {
+      const resp = await slicingService.executeSlicing({
+        designId, material, color, preset, scale,
+      });
+      setStatusMsg('Slicing in progress — this may take a few minutes…');
+      const completed = await slicingService.pollJobStatus(
+        resp.jobId,
+        job => setStatusMsg(`Slicing: ${job.status}…`),
+        120, 5000,
+      );
+      setSlicingJobId(completed.jobId);
+      setStatusMsg('');
+    } catch (e: unknown) {
+      setError((e as { message?: string })?.message ?? 'Slicing failed.');
+      setStatusMsg('');
+    } finally { setLoading(false); }
+  };
+
+  const selectCls = `${inputCls} cursor-pointer`;
+
+  return (
+    <div className="space-y-4">
+      <div className="p-3 glass border border-border/50 rounded-xl">
+        <p className="text-xs font-exo text-text-muted">Design ID</p>
+        <p className="text-xs font-exo text-primary break-all mt-0.5">{designId}</p>
+      </div>
+
+      {slicingJobId ? (
+        <div className="flex flex-col items-center gap-3 py-4">
+          <CheckCircle2 size={36} className="text-green-400" />
+          <p className="text-sm font-exo text-green-400 font-medium">Slicing completed!</p>
+          <p className="text-xs font-exo text-text-muted">Job ID: {slicingJobId}</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Material *</label>
+              <select value={material} onChange={e => setMaterial(e.target.value as ApiMaterialType)} className={selectCls}>
+                {MATERIALS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Color *</label>
+              <select value={color} onChange={e => setColor(e.target.value)} className={selectCls}>
+                {COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Preset</label>
+              <select value={preset} onChange={e => setPreset(e.target.value as typeof preset)} className={selectCls}>
+                {PRESETS.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Scale (%)</label>
+              <input type="number" min={1} max={1000} value={scale}
+                onChange={e => setScale(Number(e.target.value) || 100)} className={inputCls} />
+            </div>
+          </div>
+
+          {loading && statusMsg && (
+            <div className="flex items-center gap-2 text-xs font-exo text-primary">
+              <Loader2 size={13} className="animate-spin shrink-0" />
+              {statusMsg}
+            </div>
+          )}
+        </>
+      )}
+
+      <ErrBox msg={error} />
+      <div className="flex gap-2">
+        <Btn variant="ghost" onClick={onBack} disabled={loading}>← Back</Btn>
+        {slicingJobId
+          ? <Btn onClick={() => onDone(slicingJobId)}>Next: Upload Image →</Btn>
+          : <Btn loading={loading} onClick={runSlicing}>
+              <Cpu size={14} /> Run Slicing
+            </Btn>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 4: Upload product image ─────────────────────────────────────────────
+
+function Step4({ onBack, onDone }: { onBack: () => void; onDone: (imageUrl: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const [file,     setFile]     = useState<File | null>(null);
   const [preview,  setPreview]  = useState('');
@@ -276,11 +371,9 @@ function Step3({ onBack, onDone }: { onBack: () => void; onDone: (imageUrl: stri
         onClick={() => !imageUrl && ref.current?.click()}
         onDragOver={e => e.preventDefault()}
         onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && !imageUrl) pick(f); }}
-        className={[
-          'border-2 border-dashed rounded-xl p-6 text-center transition-all',
+        className={['border-2 border-dashed rounded-xl p-6 text-center transition-all',
           imageUrl ? 'border-green-500/40 bg-green-500/5 cursor-default'
-          : 'border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer',
-        ].join(' ')}
+          : 'border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer'].join(' ')}
       >
         {imageUrl ? (
           <div className="flex flex-col items-center gap-2">
@@ -305,7 +398,6 @@ function Step3({ onBack, onDone }: { onBack: () => void; onDone: (imageUrl: stri
       </div>
 
       <ErrBox msg={error} />
-
       <div className="flex gap-2">
         <Btn variant="ghost" onClick={onBack} disabled={loading}>← Back</Btn>
         {imageUrl
@@ -316,46 +408,40 @@ function Step3({ onBack, onDone }: { onBack: () => void; onDone: (imageUrl: stri
   );
 }
 
-// ─── Step 4: Product details ──────────────────────────────────────────────────
+// ─── Step 5: Product details ──────────────────────────────────────────────────
 
-function Step4({ editProduct, designId, imageUrl, onBack, onSuccess }: {
+function Step5({ editProduct, designId, slicingJobId, imageUrl, onBack, onSuccess }: {
   editProduct: ApiProduct | null;
-  designId: string;
-  imageUrl: string;
-  onBack: () => void;
-  onSuccess: () => void;
+  designId:    string;
+  slicingJobId: string;
+  imageUrl:    string;
+  onBack:      () => void;
+  onSuccess:   () => void;
 }) {
   const [name,        setName]        = useState(editProduct?.name ?? '');
   const [description, setDescription] = useState(editProduct?.description ?? '');
-  const [price,       setPrice]       = useState(String(editProduct?.currentBasePrice ?? ''));
-  const [stock,       setStock]       = useState(String(editProduct?.stockLevel ?? '0'));
   const [isActive,    setIsActive]    = useState(editProduct?.isActive ?? true);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState('');
 
   const submit = async () => {
     if (!name.trim()) { setError('Product name is required.'); return; }
-    const priceNum = parseFloat(price);
-    if (isNaN(priceNum) || priceNum < 0) { setError('Enter a valid price (min 0).'); return; }
     setError(''); setLoading(true);
     try {
       if (editProduct) {
         await productService.update(editProduct._id, {
           name: name.trim(),
           description: description.trim() || undefined,
-          currentBasePrice: priceNum,
-          stockLevel: parseInt(stock) || 0,
           isActive,
         });
       } else {
         await productService.create({
-          name: name.trim(),
-          description: description.trim() || undefined,
-          currentBasePrice: priceNum,
+          name:          name.trim(),
+          description:   description.trim() || undefined,
           linkedDesignId: designId,
-          images: imageUrl ? [imageUrl] : [],
+          slicingJobId,
+          images:        imageUrl ? [imageUrl] : [],
           isActive,
-          stockLevel: parseInt(stock) || 0,
         });
       }
       onSuccess();
@@ -366,16 +452,15 @@ function Step4({ editProduct, designId, imageUrl, onBack, onSuccess }: {
 
   return (
     <div className="space-y-4">
-      {/* Read-only context — only in create mode */}
       {!editProduct && (
-        <div className="grid grid-cols-1 gap-2">
-          <div className="p-3 glass border border-border/50 rounded-xl">
-            <p className="text-xs font-exo text-text-muted">Linked Design ID</p>
-            <p className="text-xs font-exo text-primary font-medium mt-0.5 break-all">{designId}</p>
+        <div className="grid grid-cols-1 gap-2 text-[10px] font-exo">
+          <div className="p-2.5 glass border border-border/50 rounded-xl flex gap-2">
+            <span className="text-text-muted shrink-0">Design:</span>
+            <span className="text-primary break-all">{designId}</span>
           </div>
-          <div className="p-3 glass border border-border/50 rounded-xl">
-            <p className="text-xs font-exo text-text-muted">Image URL</p>
-            <p className="text-xs font-exo text-primary font-medium mt-0.5 break-all">{imageUrl || '(none)'}</p>
+          <div className="p-2.5 glass border border-border/50 rounded-xl flex gap-2">
+            <span className="text-text-muted shrink-0">Slicing Job:</span>
+            <span className="text-primary break-all">{slicingJobId}</span>
           </div>
         </div>
       )}
@@ -391,19 +476,6 @@ function Step4({ editProduct, designId, imageUrl, onBack, onSuccess }: {
           rows={3} placeholder="Optional description…" className={`${inputCls} resize-none`} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Price ($) *</label>
-          <input type="number" min="0" step="0.01" value={price}
-            onChange={e => setPrice(e.target.value)} placeholder="29.99" className={inputCls} />
-        </div>
-        <div>
-          <label className={labelCls}>Stock Level</label>
-          <input type="number" min="0" step="1" value={stock}
-            onChange={e => setStock(e.target.value)} placeholder="0" className={inputCls} />
-        </div>
-      </div>
-
       <label className="flex items-center gap-3 cursor-pointer select-none">
         <div onClick={() => setIsActive(v => !v)}
           className={`w-10 h-5 rounded-full transition-colors relative ${isActive ? 'bg-primary' : 'bg-border'}`}>
@@ -413,7 +485,6 @@ function Step4({ editProduct, designId, imageUrl, onBack, onSuccess }: {
       </label>
 
       <ErrBox msg={error} />
-
       <div className="flex gap-2">
         {!editProduct && <Btn variant="ghost" onClick={onBack} disabled={loading}>← Back</Btn>}
         <Btn loading={loading} onClick={submit}>
@@ -427,22 +498,20 @@ function Step4({ editProduct, designId, imageUrl, onBack, onSuccess }: {
 // ─── Main modal ───────────────────────────────────────────────────────────────
 
 export default function ProductFormModal({ editProduct, onClose, onSuccess }: Props) {
-  // Edit mode: skip steps 1-3, go straight to step 3 (index 3)
-  const [step,     setStep]     = useState(editProduct ? 3 : 0);
-  const [fileUrl,  setFileUrl]  = useState('');
-  const [designId, setDesignId] = useState('');
-  const [imageUrl, setImageUrl] = useState(editProduct?.images?.[0] ?? '');
+  const [step,         setStep]         = useState(editProduct ? 4 : 0);
+  const [fileUrl,      setFileUrl]      = useState('');
+  const [designId,     setDesignId]     = useState('');
+  const [slicingJobId, setSlicingJobId] = useState('');
+  const [imageUrl,     setImageUrl]     = useState(editProduct?.images?.[0] ?? '');
 
   const isEdit  = editProduct !== null;
-  const total   = isEdit ? 1 : 4;   // step bar shows 4 steps in create, 1 in edit
-  const current = isEdit ? 0 : step; // in edit mode always show step 0 of 1
-
-  const title = isEdit ? `Edit: ${editProduct.name}` : 'Create Product';
+  const total   = isEdit ? 1 : 5;
+  const current = isEdit ? 0 : step;
+  const title   = isEdit ? `Edit: ${editProduct.name}` : 'Create Product';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 py-6">
       <div className="glass border border-border rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <h2 className="font-orbitron text-base font-semibold text-text">{title}</h2>
           <button onClick={onClose} aria-label="Close"
@@ -451,32 +520,20 @@ export default function ProductFormModal({ editProduct, onClose, onSuccess }: Pr
           </button>
         </div>
 
-        {/* Body */}
         <div className="p-6 overflow-y-auto flex-1">
           {!isEdit && <StepBar current={current} total={total} />}
 
-          {step === 0 && (
-            <Step1 onDone={url => { setFileUrl(url); setStep(1); }} />
-          )}
-          {step === 1 && (
-            <Step2
-              fileUrl={fileUrl}
-              onBack={() => setStep(0)}
-              onDone={id => { setDesignId(id); setStep(2); }}
-            />
-          )}
-          {step === 2 && (
-            <Step3
-              onBack={() => setStep(1)}
-              onDone={url => { setImageUrl(url); setStep(3); }}
-            />
-          )}
-          {step === 3 && (
-            <Step4
+          {step === 0 && <Step1 onDone={url => { setFileUrl(url); setStep(1); }} />}
+          {step === 1 && <Step2 fileUrl={fileUrl} onBack={() => setStep(0)} onDone={id => { setDesignId(id); setStep(2); }} />}
+          {step === 2 && <Step3 designId={designId} onBack={() => setStep(1)} onDone={id => { setSlicingJobId(id); setStep(3); }} />}
+          {step === 3 && <Step4 onBack={() => setStep(2)} onDone={url => { setImageUrl(url); setStep(4); }} />}
+          {step === 4 && (
+            <Step5
               editProduct={editProduct}
               designId={designId}
+              slicingJobId={slicingJobId}
               imageUrl={imageUrl}
-              onBack={() => setStep(2)}
+              onBack={() => setStep(3)}
               onSuccess={onSuccess}
             />
           )}

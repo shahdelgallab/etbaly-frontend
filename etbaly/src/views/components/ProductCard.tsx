@@ -1,27 +1,40 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Star, Check, Clock, Package } from 'lucide-react';
+import { ShoppingCart, Star, Clock, Package, ArrowRight } from 'lucide-react';
 import type { Product } from '../../models/Product';
-import { useCartViewModel } from '../../viewmodels/useCartViewModel';
+import { AuthenticatedImage } from './AuthenticatedImage';
+import { getDirectImageUrl } from '../../utils/imageUtils';
 
 interface Props {
   product: Product;
   view?: 'grid' | 'list';
 }
 
-export default function ProductCard({ product, view = 'grid' }: Props) {
-  const { addItem, openCart } = useCartViewModel();
-  const [added, setAdded] = useState(false);
+// Resolve image URL through proxy if it's a Google Drive link
+function resolveImage(url: string): string {
+  if (!url) return '';
+  return getDirectImageUrl(url, import.meta.env.VITE_API_URL ?? '');
+}
 
-  const handleAdd = () => {
-    addItem(product);
-    openCart();
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
+export default function ProductCard({ product, view = 'grid' }: Props) {
+  const navigate = useNavigate();
+  const [clicked, setClicked] = useState(false);
+
+  // The API requires a completed slicing job before adding to cart.
+  // Redirect to the product detail page where the user can run slicing
+  // (Re-quote) and then add to cart with a valid price.
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setClicked(true);
+    setTimeout(() => setClicked(false), 600);
+    navigate(`/products/${product.id}`);
   };
 
   const outOfStock = product.stock === 0;
+  const imgSrc = resolveImage(product.imageUrl);
+  const needsProxy = product.imageUrl?.includes('drive.google.com') || product.imageUrl?.includes('/files/proxy');
 
   if (view === 'list') {
     return (
@@ -32,8 +45,10 @@ export default function ProductCard({ product, view = 'grid' }: Props) {
         className="bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl overflow-hidden flex gap-4 p-4 group hover:shadow-card-hover hover:border-primary hover:-translate-y-0.5 transition-all duration-200"
       >
         <Link to={`/products/${product.id}`} className="w-20 h-20 rounded-lg overflow-hidden bg-[var(--color-surface)] flex-shrink-0 block border border-[var(--color-border)]">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          {imgSrc ? (
+            needsProxy
+              ? <AuthenticatedImage src={imgSrc} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              : <img src={imgSrc} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-text-muted font-bold text-xl font-sans">3D</div>
           )}
@@ -60,7 +75,7 @@ export default function ProductCard({ product, view = 'grid' }: Props) {
               </div>
               {outOfStock && <span className="text-[11px] text-danger font-sans">Out of stock</span>}
             </div>
-            <AddButton added={added} outOfStock={outOfStock} onClick={handleAdd} />
+            <AddButton clicked={clicked} outOfStock={outOfStock} onClick={handleAdd} />
           </div>
         </div>
       </motion.div>
@@ -75,12 +90,10 @@ export default function ProductCard({ product, view = 'grid' }: Props) {
       className="bg-[var(--color-surface-2)] border border-[var(--color-border)] rounded-xl overflow-hidden group flex flex-col hover:shadow-card-hover hover:border-primary hover:-translate-y-1 transition-all duration-200"
     >
       <Link to={`/products/${product.id}`} className="relative h-48 overflow-hidden bg-[var(--color-surface)] flex-shrink-0 block">
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
+        {imgSrc ? (
+          needsProxy
+            ? <AuthenticatedImage src={imgSrc} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            : <img src={imgSrc} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-text-muted font-bold text-5xl font-sans">3D</div>
         )}
@@ -127,34 +140,34 @@ export default function ProductCard({ product, view = 'grid' }: Props) {
 
         <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border)]">
           <span className="text-lg font-bold text-primary font-sans">${product.price.toFixed(2)}</span>
-          <AddButton added={added} outOfStock={outOfStock} onClick={handleAdd} />
+          <AddButton clicked={clicked} outOfStock={outOfStock} onClick={handleAdd} />
         </div>
       </div>
     </motion.div>
   );
 }
 
-function AddButton({ added, outOfStock, onClick }: { added: boolean; outOfStock: boolean; onClick: () => void }) {
+function AddButton({ clicked, outOfStock, onClick }: { clicked: boolean; outOfStock: boolean; onClick: (e: React.MouseEvent) => void }) {
   return (
     <motion.button
       whileHover={outOfStock ? {} : { scale: 1.03 }}
       whileTap={outOfStock ? {} : { scale: 0.97 }}
       onClick={onClick}
       disabled={outOfStock}
-      aria-label="Add to cart"
+      aria-label="View product and add to cart"
       className={[
         'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all font-sans',
         outOfStock
           ? 'bg-[var(--color-surface)] text-text-muted cursor-not-allowed border border-[var(--color-border)]'
-          : added
-          ? 'bg-success/10 border border-success/30 text-success'
+          : clicked
+          ? 'bg-primary/80 text-white'
           : 'bg-primary text-white hover:bg-primary-hover',
       ].join(' ')}
     >
       <AnimatePresence mode="wait" initial={false}>
-        {added ? (
-          <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-1">
-            <Check size={12} /> Added
+        {clicked ? (
+          <motion.span key="go" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-1">
+            <ArrowRight size={12} /> Going…
           </motion.span>
         ) : (
           <motion.span key="cart" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="flex items-center gap-1.5">

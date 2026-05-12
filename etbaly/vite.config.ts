@@ -3,22 +3,17 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: {
-    proxy: {
-      '/api/proxy/gdrive': {
-        target: 'https://drive.google.com',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/proxy\/gdrive/, ''),
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-          });
+  build: {
+    // Raise the chunk-size warning threshold slightly for Three.js bundles
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('three') || id.includes('@react-three')) return 'three-vendor';
+            if (id.includes('react-dom') || id.includes('react-router')) return 'react-vendor';
+            if (id.includes('framer-motion') || id.includes('lucide-react')) return 'ui-vendor';
+          }
         },
       },
     },
