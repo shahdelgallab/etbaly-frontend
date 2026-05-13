@@ -67,8 +67,14 @@ export function useAuthViewModel() {
       const idToken = await signInWithGoogle();
       const result = await dispatch(googleLoginThunk(idToken));
       if (googleLoginThunk.fulfilled.match(result)) navigate(redirectTo);
-    } catch {
-      // popup closed or cancelled — no-op
+    } catch (err: unknown) {
+      // User closed the popup — silently ignore
+      const code = (err as { code?: string })?.code;
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') return;
+
+      // Any other Firebase error (unauthorized domain, provider disabled, etc.) — surface it
+      const message = (err as { message?: string })?.message ?? 'Google sign-in failed.';
+      dispatch({ type: googleLoginThunk.rejected.type, payload: message });
     }
   };
 
